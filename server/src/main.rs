@@ -110,7 +110,7 @@ fn main() {
 
     // A WebSocket echo server
     let port = 6502;
-    let con_str = format!("ws://127.0.0.1:{}", port);
+    let con_str = format!("ws://0.0.0.0:{}", port);
 
     info!("Starting a simpleserver on port {}", port);
 
