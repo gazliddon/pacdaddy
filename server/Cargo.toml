@@ -1,0 +1,13 @@
+[package]
+name = "pacdaddy"
+version = "0.1.0"
+authors = ["Gaz Liddon Retina <gaz@gazaxian.com>"]
+
+[dependencies]
+ws="*"
+env_logger = "0.5.6"
+log="*"
+cgmath="*"
+rand = "0.3"
+json = "*"
+url="*"
