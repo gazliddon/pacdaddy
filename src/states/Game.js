@@ -130,7 +130,9 @@ export default class extends Phaser.State {
       res.flush()
     }
 
-    const socket = new Socket('127.0.0.1', 6502, {onMessage, onOpen})
+    console.log(location)
+
+    const socket = new Socket(location.hostname, 6502, {onMessage, onOpen})
 
     const updateCounter = () => {
       socket.flush()
