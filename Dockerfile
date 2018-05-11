@@ -15,6 +15,7 @@ RUN apt-get install -y npm
 RUN apt-get install -y git
 RUN apt-get install -y tmux
 RUN npm install -g yarn
+run npm install -g http-server
 RUN mkdir pacdaddy
 
 COPY EXPORT pacdaddy/
