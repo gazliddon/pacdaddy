@@ -1,2 +1,3 @@
+rm -rf EXPORT
 git checkout-index -a -f --prefix=EXPORT/
 docker build . -t pacdaddy

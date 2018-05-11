@@ -1,3 +1,3 @@
-http-server --no-dotfiles -g -p 6809 build -s &
+http-server --no-dotfiles -g -p 6809 build &
 cd server
 cargo run
