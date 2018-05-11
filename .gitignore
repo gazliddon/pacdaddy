@@ -8,3 +8,4 @@ dist/
 /index.html
 build/
 .DS_Store
+EXPORT
