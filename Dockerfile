@@ -4,7 +4,7 @@ LABEL My node thing!
 
 WORKDIR /root
 
-EXPOSE 6500/tcp
+EXPOSE 6809/tcp
 EXPOSE 6502/tcp
 
 RUN apt-get update
@@ -21,5 +21,6 @@ COPY EXPORT pacdaddy/
 WORKDIR /root/pacdaddy
 RUN cd server && cargo build
 RUN yarn install && yarn run deploy
+RUN ./serveit
 
 
