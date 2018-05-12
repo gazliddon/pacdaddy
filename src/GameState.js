@@ -1,5 +1,5 @@
 import Player from './Player'
-import {Point as P} from 'phaser'
+import Phaser, {Point as P} from 'phaser'
 import Dispatchable from './Dispatchable'
 import _ from 'lodash'
 
@@ -19,13 +19,15 @@ export default class extends Dispatchable {
   }
 
   onJoined (res, {data, time}) {
+    console.log(data)
     let {game, group} = this
-    let {id, pos: {x, y}} = data
+    let {id, pos: {x, y}, name} = data
     this.id = id
     this.time = time
     this.lastTime = performance.now()
     const pos = new P(x, y)
-    this.player = new Player({game, pos, id, group})
+    const max = new P(1920, 1920)
+    this.player = new Player({game, pos, id, group, name, max})
   }
 
   mkMessage (msg, data) {
@@ -67,10 +69,15 @@ export default class extends Dispatchable {
   }
 
   update (res) {
-    let {player} = this
+
+    let {player, game} = this
 
     if (player) {
       player.update()
+
+      let pspr = player.getSprite()
+
+      game.camera.follow(pspr, Phaser.Camera.FOLLOW_LOCKON, 0.1, 0.1)
 
       let payLoad = {
         pos: {
@@ -80,6 +87,8 @@ export default class extends Dispatchable {
       }
 
       this.sendNow(res, 'player', payLoad)
+    } else {
+      game.camera.follow()
     }
   }
 }

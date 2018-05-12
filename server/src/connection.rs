@@ -116,9 +116,12 @@ impl ws::Handler for Connection {
 
                 let id = state.add_player(&pos, self.time);
 
+                let name = data["name"].to_string();
+
                 let payload = object!{
                     "id" => id,
                     "pos" => &MyV2(pos),
+                    "name" => name,
                 };
 
                 let jstate : JsonValue = json::from(&*state);

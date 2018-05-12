@@ -1,6 +1,6 @@
 import Phaser, { Point as P} from 'phaser'
 import Pickup from '../sprites/Pickup'
-import Socket from '../Socket'
+import {makeSocket} from '../Socket'
 
 import GameState from '../GameState'
 
@@ -67,21 +67,16 @@ export default class extends Phaser.State {
   }
 
   preload () {
-    let game = this.game
+    // let game = this.game
 
-    game.load.image('star', 'assets/images/star.png')
-    this.load.spritesheet('ms', 'assets/images/pacman.png', 16, 16)
     this.stage.disableVisibilityChange = true
     this.scale.scaleMode = Phaser.ScaleManager.SHOW_ALL
     this.scale.pageAlignHorizontally = true
     this.scale.pageAlignVertically = true
-    // this.scale.setScreenSize( true );
-    // Phaser.Canvas.setSmoothingEnabled(this.game.context, false);
   }
 
   makeBanner () {
     let {game, world} = this
-
     const bannerText = 'pacdaddy'
 
     let banner = this.add.text(world.centerX, game.height - 80, bannerText, {
@@ -94,45 +89,90 @@ export default class extends Phaser.State {
     banner.anchor.setTo(0.5)
   }
 
+  setupStar (sprObj) {
+    let {spr} = sprObj
+    let p = new P(Math.random() * 1920, Math.random() * 1920)
+    spr.x = p.x
+    spr.y = p.y
+    sprObj.pos = p
+    sprObj.maxT = this.game.rnd.frac() * 120 + 360
+    sprObj.t = 0
+    sprObj.scale = 0.5 + this.game.rnd.frac() * 0.5
+  }
+
   makeStars (n) {
     let {game} = this
-    let starsBatch = game.add.spriteBatch()
+
     let stars = []
 
+    let batch = game.add.spriteBatch()
+
     for (let i = 0; i < n; i++) {
-      let star = game.make.sprite(Math.random() * 1920, Math.random() * 1920, 'star')
+      let p = new P(Math.random() * 1000, Math.random() * 1000)
+
+      let star = game.make.sprite(p.x, p.y, 'star')
       star.anchor.set(0.5)
-      starsBatch.addChild(star)
-      stars.push(star)
+      star.fixedToCamera = true
+
+      let starObj = { spr: star }
+      this.setupStar(starObj)
+
+      stars.push(starObj)
+      batch.addChild(star)
     }
 
     this.stars = stars
+    this.starsBatch = batch
+  }
+
+  updateStars ({x, y}) {
+    for (const sprObj of this.stars) {
+      let {scale, spr, t, maxT} = sprObj
+
+      let dt = 1 - Math.abs(Math.cos( (t / maxT) * 2 * 3.141592))
+
+      spr.alpha = dt
+
+      if (t > maxT) {
+        this.setupStar(sprObj)
+      } else {
+        sprObj.t = t + 1
+      }
+
+      let {pos} = sprObj
+
+      spr.cameraOffset.x = pos.x - x * scale
+      spr.cameraOffset.y = pos.y - y * scale
+    }
   }
 
   create () {
+    let {socket} = window.billboard
+
     const game = this.game
 
     game.world.setBounds(0, 0, 1920, 1920)
-    game.camera.scale.setTo(2, 2)
+    game.camera.scale.setTo(4, 4)
 
-    this.makeStars(1000)
+    this.makeStars(500)
     this.makeBanner()
 
     const onScreenItems = new OnScreenItems(game)
     const gameState = new GameState(game)
 
-    const onMessage = (res, incoming) => {
+    this.socket = socket
+
+    socket.onMessage((res, incoming) => {
       gameState.dispatch(incoming.msg, res, incoming)
-    }
+    })
 
-    const onOpen = (res) => {
-      res.send({ msg: 'hello', time: 0, id: 0 })
-      res.flush()
-    }
+    socket.onClose((incoming) => {
+      this.state.start('Splash')
+    })
 
-    console.log(location)
+    console.log(window.billboard)
 
-    const socket = new Socket(location.hostname, 6502, {onMessage, onOpen})
+    socket.sendNow({ msg: 'hello', time: 0, id: 0, data: {name: window.billboard.name} })
 
     const updateCounter = () => {
       socket.flush()
@@ -147,11 +187,13 @@ export default class extends Phaser.State {
   }
 
   update () {
-    let {socket, gameState, onScreenItems} = this
-
+    let {game, socket, gameState, onScreenItems} = this
     onScreenItems.adjust(gameState.objs, this.id)
     gameState.update(socket)
     onScreenItems.update()
+
+    let camPos = new P(game.camera.x, game.camera.y)
+    this.updateStars(camPos)
   }
 
   render () {

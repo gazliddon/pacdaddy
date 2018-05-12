@@ -5,6 +5,7 @@ import PosVelComponent from './PosVel'
 import ScaleComponent from './Scale'
 import StickComponnet from './Stick'
 import SprComponent from './Spr'
+import TextSprComponent from './TextSpr'
 
 const table = {
   start: { nothing: 'idle' },
@@ -20,7 +21,7 @@ const table = {
 }
 
 export default class Player extends Obj {
-  constructor ({game, id, pos, group}) {
+  constructor ({game, id, pos, group, name}) {
     super({game, type: 'player', id, table})
 
     let keys = game.input.keyboard.createCursorKeys()
@@ -31,10 +32,15 @@ export default class Player extends Obj {
       stick: new StickComponnet({keys}),
       spr: new SprComponent({
         game, pos, group, asset: 'ms'
-      })
+      }),
+      text: new TextSprComponent({game, pos, text: name})
     }
 
     this.ev('start')
+  }
+
+  getSprite () {
+    return this.comps.spr.spr
   }
 
   onIdle () {
@@ -61,7 +67,7 @@ export default class Player extends Obj {
   }
 
   update () {
-    let {posVel, scale, spr, stick} = this.comps
+    let {posVel, scale, spr, stick, text} = this.comps
 
     stick.update()
 
@@ -83,5 +89,8 @@ export default class Player extends Obj {
     spr.setScale(scale.getScale())
     spr.setPos(posVel.pos)
     spr.update()
+
+    text.setPos(new P(posVel.pos.x, posVel.pos.y - 10))
+    text.update()
   }
 }

@@ -20,10 +20,34 @@ export default class PosVelComponent {
 
   update () {
     this.clamp()
-    this.pos = P.add(this.pos, this.vel)
-    P.add(this.pos, this.vel, this.pos)
-    P.multiply(this.vel, this.fric, this.vel)
+
+    let { max, pos, vel, fric } = this
+
+    this.pos = P.add(pos, vel)
+
+    let newv = P.multiply(vel, fric)
+    this.vel = newv
+
     this.clamp()
+
+    if (this.pos.x < 0) {
+      this.pos.x = 0
+    }
+
+    if (this.pos.y < 0) {
+      this.pos.y = 0
+    }
+
+    if (max) {
+      let {x, y} = max
+      if (this.pos.x > x) {
+        this.pos.x = x
+      }
+
+      if (this.pos.y > y) {
+        this.pos.y = y
+      }
+    }
   }
 
   getVelMagnitude () {
