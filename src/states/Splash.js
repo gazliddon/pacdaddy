@@ -25,6 +25,8 @@ export default class extends Phaser.State {
     this.load.image('mushroom', 'assets/images/mushroom2.png')
     this.load.image('star', 'assets/images/star.png')
     this.load.spritesheet('ms', 'assets/images/pacman.png', 16, 16)
+    this.load.audio('main', 'assets/zone of endor.mp3')
+    this.load.audio('title', 'assets/galax.mp3')
   }
 
   onClickMe () {
@@ -35,20 +37,7 @@ export default class extends Phaser.State {
     let person = prompt('Please enter your name', ls.name)
     ls.name = person
 
-    this.title.inputEnabled = false
-    let {game, world} = this
-
-    this.bannerText = 'Connecting\n'
-
-    let banner = this.add.text(world.centerX, game.height - 80, this.bannerText, {
-      font: '80px Bungee Shade',
-      fill: '#eee',
-      smoothed: false
-    })
-
-    banner.padding.set(10, 16)
-    banner.anchor.setTo(0.5)
-    this.banner = banner
+    let {world} = this
 
     const onRetry = (_, trys) => {
       this.sm.ev('retry', trys)
@@ -59,7 +48,7 @@ export default class extends Phaser.State {
     }
 
     const onError = (err) => {
-      banner.text = 'sad face'
+      this.banner.text = 'sad face'
       console.log('this is an error')
       console.log(err)
     }
@@ -74,6 +63,7 @@ export default class extends Phaser.State {
   }
 
   onFading (socket) {
+    this.music.fadeOut(1000)
     this.banner.text = 'connected!'
     this.camera.fade('#000000')
     this.camera.onFadeComplete.add(() => {
@@ -82,6 +72,7 @@ export default class extends Phaser.State {
   }
 
   onStartGame (socket, name) {
+    this.music.stop()
     window.billboard.socket = socket
     window.billboard.name = window.localStorage.name
     this.state.start('Game')
@@ -89,19 +80,40 @@ export default class extends Phaser.State {
 
   makeTitle () {
     let {game, world} = this
-    let title = game.add.sprite(world.centerX, world.centerY, 'title')
+    let title = game.add.sprite(world.centerX, world.centerY - 200, 'title')
     title.anchor.set(0.5)
     title.smoothed = false
-    title.inputEnabled = true
     return title
   }
 
   create () {
     let {game, world} = this
+
+    let music = this.add.audio('title')
+
+    this.bannerText = 'CLICK ME'
+
+    let banner = this.add.text(world.centerX, game.height - 80, this.bannerText, {
+      font: '80px Bungee Shade',
+      fill: '#eee',
+      smoothed: false
+    })
+
+    banner.padding.set(10, 16)
+    banner.anchor.setTo(0.5)
+    banner.inputEnabled = true
+    this.banner = banner
+
+    music.volume = 0.1
+    music.loop = true
+    music.play()
+    this.music = music
+
     world.setBounds(0, 0, game.canvas.clientWidth, game.canvas.clientHeight)
     this.title = this.makeTitle()
 
-    this.title.events.onInputDown.add(() => {
+    this.banner.events.onInputDown.add(() => {
+      this.banner.inputEnabled = false
       this.sm.ev('click')
     })
 

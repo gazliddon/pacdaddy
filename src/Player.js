@@ -58,7 +58,7 @@ export default class Player extends Obj {
   }
 
   onSlide () {
-    this.comps.posVel.setFric(new P(0.7, 0.7))
+    this.comps.posVel.setFric(new P(0.9, 0.9))
   }
 
   onEatFruit (_, first) {
@@ -67,19 +67,31 @@ export default class Player extends Obj {
   }
 
   update () {
+    let {game} = this
     let {posVel, scale, spr, stick, text} = this.comps
+
+    let sx = game.camera.scale.x
+    let sy = game.camera.scale.y
+    let x = game.input.activePointer.worldX / sx
+    let y = game.input.activePointer.worldY / sy
+
+    let mp = new P(x, y)
 
     stick.update()
 
-    if (stick.vel.getMagnitude() < 0.0000001) {
+    // let vel = stick.vel
+
+    let vel = P.subtract(mp, posVel.pos)
+
+    if (vel.getMagnitude() < 20) {
       this.ev('stickidle')
     } else {
-      this.ev('stickmove', stick.vel)
+      this.ev('stickmove', vel)
     }
 
     posVel.update()
 
-    if (posVel.getVelMagnitude() < 0.1) {
+    if (posVel.getVelMagnitude() < 0.001) {
       this.ev('stopped')
     }
 

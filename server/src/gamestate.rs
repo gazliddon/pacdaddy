@@ -86,7 +86,7 @@ impl GameState {
     pub fn new() -> Self {
         let mut objs = NetworkObjs::new();
 
-        for _ in 0..30 {
+        for _ in 0..100 {
             let obj = mk_random_pickup();
             objs.add(obj);
         }
@@ -148,7 +148,9 @@ impl GameState {
 
             for pickup_id in hit {
                 p.scale = p.scale * 1.1;
-                self.objs.remove(pickup_id)
+                self.objs.remove(pickup_id);
+                let obj = mk_random_pickup();
+                self.objs.add(obj);
             }
 
             for o in &mut self.objs.objs  {

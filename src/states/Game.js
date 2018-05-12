@@ -1,4 +1,4 @@
-import Phaser, { Point as P} from 'phaser'
+import Phaser, { Color, Point as P} from 'phaser'
 import Pickup from '../sprites/Pickup'
 import {makeSocket} from '../Socket'
 
@@ -96,7 +96,7 @@ export default class extends Phaser.State {
     spr.y = p.y
     sprObj.pos = p
     sprObj.maxT = this.game.rnd.frac() * 120 + 360
-    sprObj.t = 0
+    sprObj.t = this.game.rnd.frac() * sprObj.maxT
     sprObj.scale = 0.5 + this.game.rnd.frac() * 0.5
   }
 
@@ -108,9 +108,7 @@ export default class extends Phaser.State {
     let batch = game.add.spriteBatch()
 
     for (let i = 0; i < n; i++) {
-      let p = new P(Math.random() * 1000, Math.random() * 1000)
-
-      let star = game.make.sprite(p.x, p.y, 'star')
+      let star = game.make.sprite(0, 0, 'star')
       star.anchor.set(0.5)
       star.fixedToCamera = true
 
@@ -129,7 +127,9 @@ export default class extends Phaser.State {
     for (const sprObj of this.stars) {
       let {scale, spr, t, maxT} = sprObj
 
-      let dt = 1 - Math.abs(Math.cos( (t / maxT) * 2 * 3.141592))
+      let dt = 1 - Math.abs(Math.cos((t / maxT) * 2 * 3.141592))
+
+      spr.scale.set(2 + dt, 2 + dt)
 
       spr.alpha = dt
 
@@ -146,15 +146,28 @@ export default class extends Phaser.State {
     }
   }
 
+  exit () {
+    this.music.fadeOut(100)
+    this.state.start('Splash')
+  }
+
   create () {
+    let {game} = this
     let {socket} = window.billboard
 
-    const game = this.game
+    let music = game.add.audio('main')
+
+    music.volume = 0.05
+    music.loop = true
+    music.play()
+    this.music = music
+
+    let scale = 2.4
 
     game.world.setBounds(0, 0, 1920, 1920)
-    game.camera.scale.setTo(4, 4)
+    game.camera.scale.setTo(scale)
 
-    this.makeStars(500)
+    this.makeStars(1000)
     this.makeBanner()
 
     const onScreenItems = new OnScreenItems(game)
@@ -167,10 +180,8 @@ export default class extends Phaser.State {
     })
 
     socket.onClose((incoming) => {
-      this.state.start('Splash')
+      this.exit()
     })
-
-    console.log(window.billboard)
 
     socket.sendNow({ msg: 'hello', time: 0, id: 0, data: {name: window.billboard.name} })
 
@@ -184,18 +195,41 @@ export default class extends Phaser.State {
     game.physics.startSystem(Phaser.Physics.ARCADE)
     this.time.events.loop(Phaser.Timer.SECOND * 3, updateCounter, this)
     // const pos = new P(this.world.centerX, this.world.centerY)
+    //
+    //
+  }
+
+  getMousePosWorld () {
+    let {game} = this
+
+    let sx = game.camera.scale.x
+    let sy = game.camera.scale.y
+    let x = game.input.activePointer.worldX / sx
+    let y = game.input.activePointer.worldY / sy
+
+    return new P(x, y)
   }
 
   update () {
     let {game, socket, gameState, onScreenItems} = this
+
+    let b = (game.camera.y / 1920)
+
+    if (b > 1) { b = 1 }
+
+    b = Math.floor(b * 255)
+    const c = Color.RGBtoString(0, 0, b, 255, '#')
+    game.stage.backgroundColor = c
+
     onScreenItems.adjust(gameState.objs, this.id)
     gameState.update(socket)
     onScreenItems.update()
-
     let camPos = new P(game.camera.x, game.camera.y)
     this.updateStars(camPos)
   }
 
   render () {
+    let {game} = this
+    // game.debug.cameraInfo(game.camera, 32, 32)
   }
 }
