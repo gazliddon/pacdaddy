@@ -224,6 +224,9 @@ impl GameState {
             }
         }
 
+        // At this point I'd flush the events to create a smaller update
+        self.events.clear();
+
         None
     }
 
