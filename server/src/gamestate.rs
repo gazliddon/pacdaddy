@@ -4,6 +4,9 @@ use json::JsonValue;
 use rand;
 use obj::{Obj, V2, MyV2, ObjType};
 use clock;
+use ws::{Sender};
+use json;
+use utils::{mk_msg};
 
 fn mk_random_vec() -> V2 {
     use rand::distributions::{IndependentSample, Range};
@@ -39,11 +42,17 @@ pub struct Player {
     last_update: u64,
     scale : f64,
     score : u32,
+    out : Sender,
 }
 
 impl Player {
     pub fn since_last_update(&self, now : u64) -> f64 {
         (now - self.last_update) as f64 / 1_000_000_000.0
+    }
+
+    pub fn send_msg(&self, msg : &str, time: u64, data : json::JsonValue) {
+        let msg_string = mk_msg(msg, data, time);
+        self.out.send(msg_string).unwrap();
     }
 }
 
@@ -121,7 +130,7 @@ impl GameState {
         self.objs.add(obj)
     }
 
-    pub fn add_player(&mut self, name: &str, pos : &V2, time : u64) -> u64 {
+    pub fn add_player(&mut self, name: &str, pos : &V2, time : u64, out : Sender) -> u64 {
 
         let mut obj = Obj::new(ObjType::Player, 0, *pos, V2::new(0.0, 0.0), time, "player");
 
@@ -134,6 +143,7 @@ impl GameState {
             last_update : time,
             score: 0,
             frame: 0,
+            out
         };
 
         self.players.insert(id, player);
@@ -194,7 +204,15 @@ impl GameState {
         for &(player_id, pickup_id) in pickup_hit.iter() {
             pickups_killed = pickups_killed + 1;
             self.remove_obj(pickup_id, time);
+
+
             if let Some(player) = self.players.get_mut(&player_id) {
+
+                let data = object!{
+                    "id" => pickup_id,
+                };
+
+                player.send_msg("eatFruit", time, data);
                 player.scale = player.scale * 1.1;
             }
         }
@@ -241,5 +259,4 @@ impl GameState {
             x.last_update = self.clock.now();
         }
     }
-
 }

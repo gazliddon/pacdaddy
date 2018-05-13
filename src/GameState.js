@@ -13,6 +13,8 @@ export default class extends Dispatchable {
     this.id = -1
     this.time = -1
     this.group = game.add.group()
+
+    this.sfx = game.add.audio('eat_dot')
   }
 
   networkTime (time) {
@@ -50,6 +52,10 @@ export default class extends Dispatchable {
   onPing (res, incoming) {
     let {time, data: {id}} = incoming
     this.sendNow(res, 'pong', {id, time})
+  }
+
+  onEatFruit (res, incoming) {
+    this.sfx.play()
   }
 
   onState (res, payLoad) {

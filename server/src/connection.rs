@@ -56,6 +56,7 @@ pub struct Connection {
     rtt_peak: f64,
 }
 
+
 impl Connection {
     pub fn new(out : ws::Sender, state: Arc<Mutex<GameState>>) -> Self {
         let time = {
@@ -115,8 +116,7 @@ impl ws::Handler for Connection {
                 let pos = V2::new(100.0,100.0);
                 let name = data["name"].to_string();
 
-                let id = state.add_player(&name, &pos,  self.time);
-
+                let id = state.add_player(&name, &pos,  self.time, self.out.clone());
 
                 let payload = object!{
                     "id" => id,
@@ -136,9 +136,6 @@ impl ws::Handler for Connection {
                 let rtt = ((rtt_ns / 1000) as f64) / 1000.0;
                 // self.add_rtt(rtt);
                 info!("{} : rtt millis {}", client_id,  rtt);
-            }
-
-            "eatfruit" => {
             }
 
             "player" => {
