@@ -72,9 +72,8 @@ export default class extends Dispatchable {
     let o = this.objs[id]
 
     if (o) {
-      o.pos = pos
-      o.vel = vel
-    } else {
+      o.serverPos = pos
+      o.serverVel = vel
     }
   }
 
@@ -98,10 +97,18 @@ export default class extends Dispatchable {
     let {player, game} = this
 
     _.forEach(this.objs, (v, k) => {
-      let {pos, vel} = v
+      let {serverPos, serverVel} = v
 
-      if (vel) {
-        v.pos = P.add(pos, vel)
+      if (serverPos && serverVel) {
+        serverPos = P.add(serverPos, serverVel)
+
+        // let diff = P.subtract(serverPos, v.pos)
+
+        // diff = P.multiply(diff, new P(0.01, 0.01), diff)
+
+        v.pos = serverPos
+
+        v.serverPos = serverPos
       }
     })
 
