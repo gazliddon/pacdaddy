@@ -15,10 +15,8 @@ fn mk_random_vec() -> V2 {
     V2::new(x,y)
 }
 
-fn mk_random_pickup() -> Obj {
+fn mk_random_pickup(time : u64) -> Obj {
     use rand::Rng;
-
-    let time = 0;
 
     let names = vec![
         "burger","coke", "pizza"
@@ -103,29 +101,30 @@ impl<'a > From<&'a GameState> for JsonValue {
 
 impl GameState {
     pub fn new() -> Self {
-        let mut objs = NetworkObjs::new();
-
-        for _ in 0..100 {
-            let obj = mk_random_pickup();
-            objs.add(obj);
-        }
-
-        Self {
-            objs,
+        let mut ret = Self {
+            objs : NetworkObjs::new(),
             players: HashMap::new(),
             next_id : 0,
             clock: clock::Clock::new(),
             events: vec![],
+        };
+
+        for _ in 0..100 {
+            let obj = mk_random_pickup(0);
+            ret.add_obj(obj);
         }
+
+        ret
     }
 
-    pub fn add_obj(&mut self) -> u64 {
-        self.objs.add(mk_random_pickup())
+    pub fn add_obj(&mut self, obj : Obj) -> u64 {
+        self.objs.add(obj)
     }
 
     pub fn add_player(&mut self, name: &str, pos : &V2, time : u64) -> u64 {
 
         let mut obj = Obj::new(ObjType::Player, 0, *pos, V2::new(0.0, 0.0), time, "player");
+
         obj.name = Some(name.to_string());
 
         let id = self.objs.add(obj);
@@ -174,9 +173,6 @@ impl GameState {
             warn!("Could not update obj id: {}", id);
         }
     }
-    fn add_obj(&mut self, time : u64) {
-        panic!("ksjakjskaj")
-    }
 
     fn collide_pickups(&mut self, time : u64) -> usize {
         let mut pickup_hit : Vec<(u64, u64)> = vec![];
@@ -214,8 +210,8 @@ impl GameState {
         let killed = self.collide_pickups(time);
 
         for _ in 0 .. killed {
-            let obj = mk_random_pickup();
-            self.objs.add(obj);
+            let obj = mk_random_pickup(time);
+            self.add_obj(obj);
         }
 
         // update player objs
