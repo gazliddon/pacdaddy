@@ -138,7 +138,7 @@ fn main() {
 
     let mut server = Server::new(&con_str);
 
-    let  pause_time = time::Duration::from_millis(17);
+    let  pause_time = time::Duration::from_millis(100);
 
     loop {
         server.update();
