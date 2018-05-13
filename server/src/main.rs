@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
 extern crate env_logger;
+#[macro_use] extern crate structopt;
 
 #[macro_use] extern crate log;
 #[macro_use] extern crate json;
@@ -24,6 +25,22 @@ use std::sync::{ Arc, Mutex };
 use gamestate::{GameState};
 use std::thread;
 use connection::{Connection};
+use structopt::StructOpt;
+
+#[derive(StructOpt, Debug)]
+#[structopt(name = "basic")]
+struct Opts {
+    #[structopt(short = "v", long = "verbose", parse(from_occurrences))]
+    verbose: u8, 
+
+    /// admin_level to consider
+    #[structopt(short = "h", long = "host")]
+    host: Option<String>,
+
+     /// Number of cars
+    #[structopt(short = "p", long = "port")]
+    port: Option<u32>,
+}
 
 pub struct Server {
     state: Arc<Mutex<GameState>>,
@@ -104,13 +121,19 @@ fn main() {
     use std::env;
     use std::time;
 
-    env::set_var("RUST_LOG", "info");
+    let opts = Opts::from_args();
+
+    if opts.verbose > 0 {
+        env::set_var("RUST_LOG", "info");
+    }
 
     env_logger::init();
 
     // A WebSocket echo server
-    let port = 6502;
-    let con_str = format!("ws:/0.0.0.0:{}", port);
+    let port = opts.port.unwrap_or(6502);
+    let host = opts.host.unwrap_or("localhost".to_string());
+
+    let con_str = format!("ws:/{}:{}", host, port);
 
     info!("Starting a simpleserver on port {}", port);
 
