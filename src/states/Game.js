@@ -1,6 +1,5 @@
 import Phaser, { Color, Point as P} from 'phaser'
 import Pickup from '../sprites/Pickup'
-import {makeSocket} from '../Socket'
 
 import GameState from '../GameState'
 
@@ -12,6 +11,7 @@ class OnScreenItems {
     this.objs = {}
     this.group = game.add.group()
     this.asset = 'ms'
+    this.names = {}
   }
 
   adjust (gameStateObjs) {
@@ -34,10 +34,10 @@ class OnScreenItems {
     })
   }
 
-  addSpr ({id: nwId, pos: {x, y}, kind}) {
+  addSpr ({name, id: nwId, pos: {x, y}, kind}) {
     const {game, group, asset} = this
     const pos = new P(x, y)
-    const myObj = new Pickup({ game, kind, group, pos, asset, nwId })
+    const myObj = new Pickup({ game, kind, group, pos, asset, nwId, name })
     this.objs[nwId] = myObj
   }
 

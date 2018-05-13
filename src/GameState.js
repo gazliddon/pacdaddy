@@ -69,7 +69,6 @@ export default class extends Dispatchable {
   }
 
   update (res) {
-
     let {player, game} = this
 
     if (player) {

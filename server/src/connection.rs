@@ -113,10 +113,10 @@ impl ws::Handler for Connection {
 
             "hello" => {
                 let pos = V2::new(100.0,100.0);
-
-                let id = state.add_player(&pos, self.time);
-
                 let name = data["name"].to_string();
+
+                let id = state.add_player(&name, &pos,  self.time);
+
 
                 let payload = object!{
                     "id" => id,

@@ -1,5 +1,6 @@
-import {Sprite as Spr} from 'phaser'
+import {Sprite as Spr, Point as P} from 'phaser'
 import StateMachine from '../StateMachine'
+import TextSprComponent from '../TextSpr'
 
 const table = {
   start: { nothing: 'idle' },
@@ -16,7 +17,7 @@ const table = {
 // }
 
 export default class extends Spr {
-  constructor ({ game, pos, asset, kind, nwId, group }) {
+  constructor ({ game, pos, asset, kind, nwId, group, name }) {
     super(game, pos.x, pos.y, asset)
 
     this.pos = pos
@@ -39,7 +40,27 @@ export default class extends Spr {
     this.enableBody = true
     this.body.immovable = true
 
+    if (name) {
+      this.addName(name)
+    }
+
+    console.log(name)
+
     group.add(this)
+  }
+
+  addName (name) {
+    let {game, pos} = this
+    let nameComp = new TextSprComponent({game, pos, text: name})
+    this.name = nameComp
+  }
+
+  updateName () {
+    let {name, pos} = this
+    if (name) {
+      name.setPos(new P(pos.x, pos.y - 10))
+      name.update()
+    }
   }
 
   onStart () {
@@ -58,6 +79,7 @@ export default class extends Spr {
   update () {
     this.x = this.pos.x
     this.y = this.pos.y
+    this.updateName()
   }
 
   setAnim (kind) {
