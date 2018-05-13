@@ -21,12 +21,26 @@ export default class extends Phaser.State {
   }
 
   preload () {
+    // let resources = {
+    //   images: {
+    //     title: 'assets/images/title.png',
+    //     mushroom: 'assets/images/mushroom2.png',
+    //     star: 'assets/images/star.png'
+    //   },
+
+    //   audio: {
+    //     main: 'assets/zone of endor.mp3',
+    //     title: 'assets/galax.mp3'
+    //   }
+    // }
+
     this.load.image('title', 'assets/images/title.png')
     this.load.image('mushroom', 'assets/images/mushroom2.png')
     this.load.image('star', 'assets/images/star.png')
-    this.load.spritesheet('ms', 'assets/images/pacman.png', 16, 16)
     this.load.audio('main', 'assets/zone of endor.mp3')
     this.load.audio('title', 'assets/galax.mp3')
+
+    this.load.spritesheet('ms', 'assets/images/pacman.png', 16, 16)
   }
 
   onClickMe () {
@@ -36,8 +50,6 @@ export default class extends Phaser.State {
     let ls = window.localStorage
     let person = prompt('Please enter your name', ls.name)
     ls.name = person
-
-    let {world} = this
 
     const onRetry = (_, trys) => {
       this.sm.ev('retry', trys)
