@@ -174,9 +174,14 @@ impl GameState {
             warn!("Could not update obj id: {}", id);
         }
     }
+    fn add_obj(&mut self, time : u64) {
+        panic!("ksjakjskaj")
+    }
 
-    fn collide_pickups(&mut self, time : u64) {
+    fn collide_pickups(&mut self, time : u64) -> usize {
         let mut pickup_hit : Vec<(u64, u64)> = vec![];
+
+        let mut pickups_killed = 0;
 
         for (object_id, obj) in self.objs.objs.iter() {
             if obj.obj_type == ObjType::Pickup {
@@ -191,19 +196,27 @@ impl GameState {
         }
 
         for &(player_id, pickup_id) in pickup_hit.iter() {
+            pickups_killed = pickups_killed + 1;
             self.remove_obj(pickup_id, time);
             if let Some(player) = self.players.get_mut(&player_id) {
                 player.scale = player.scale * 1.1;
             }
         }
 
+        pickups_killed
     }
 
     pub fn update(&mut self) -> Option<JsonValue> {
         let time = self.clock.now();
 
         self.prune_inactive_players(time);
-        self.collide_pickups(time);
+
+        let killed = self.collide_pickups(time);
+
+        for _ in 0 .. killed {
+            let obj = mk_random_pickup();
+            self.objs.add(obj);
+        }
 
         // update player objs
         

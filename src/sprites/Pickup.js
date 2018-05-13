@@ -49,6 +49,13 @@ export default class extends Spr {
     group.add(this)
   }
 
+  kill () {
+    super.kill()
+    if (this.name) {
+      this.name.kill()
+    }
+  }
+
   addName (name) {
     let {game, pos} = this
     let nameComp = new TextSprComponent({game, pos, text: name})

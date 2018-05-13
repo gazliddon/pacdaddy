@@ -18,6 +18,10 @@ export default class TextSprComponent {
     this.pos.y = v.y
   }
 
+  kill () {
+    this.textSpr.kill()
+  }
+
   update () {
     this.textSpr.x = this.pos.x
     this.textSpr.y = this.pos.y
