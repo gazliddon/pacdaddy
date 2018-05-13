@@ -9,7 +9,7 @@ pub fn as_secs(n : u64) -> f64 {
 }
 
 impl Clock {
-    pub fn time(&self) -> u64 {
+    pub fn now(&self) -> u64 {
         let dur = SystemTime::now().duration_since(self.start_time).unwrap();
 
         let secs = dur.as_secs() as u64;
@@ -17,8 +17,8 @@ impl Clock {
         secs * 1_000_000_000 + ns
     }
 
-    pub fn time_secs(&self) -> f64 {
-        as_secs(self.time())
+    pub fn now_secs(&self) -> f64 {
+        as_secs(self.now())
     }
 
     pub fn new() -> Self {

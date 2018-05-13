@@ -60,7 +60,7 @@ impl Connection {
     pub fn new(out : ws::Sender, state: Arc<Mutex<GameState>>) -> Self {
         let time = {
             let mut unlocked = state.lock().unwrap();
-            unlocked.clock.time()
+            unlocked.clock.now()
         };
 
         let mut rtt = vec![];
@@ -99,7 +99,7 @@ impl ws::Handler for Connection {
     fn on_message(&mut self, msg: ws::Message) -> ws::Result<()> {
         let mut state = self.state.lock().unwrap();
 
-        self.time = state.clock.time();
+        self.time = state.clock.now();
 
         let parsed = json::parse(&msg.to_string()).unwrap();
 
@@ -132,7 +132,7 @@ impl ws::Handler for Connection {
             "pong" => {
                 // let ping_id = data["id"].as_u64().unwrap();
                 let send_time = data["time"].as_u64().unwrap();
-                let rtt_ns = state.clock.time() - send_time;
+                let rtt_ns = state.clock.now() - send_time;
                 let rtt = ((rtt_ns / 1000) as f64) / 1000.0;
                 // self.add_rtt(rtt);
                 info!("{} : rtt millis {}", client_id,  rtt);

@@ -16,9 +16,9 @@ pub struct Obj {
     pub vel : V2,
     pub time : u64,
     pub kind: String,
-    pub alive: bool,
     pub obj_type : ObjType,
     pub scale : f64,
+    pub dirty : bool,
 }
 
 impl<'a> From<&'a ObjType> for JsonValue {
@@ -47,7 +47,6 @@ impl<'a> From<&'a Obj> for JsonValue {
             "vel" => &MyV2(o.vel),
             "kind" => o.kind.clone(),
             "time" => o.time,
-            "alive" => o.alive,
             "obj_type" => &o.obj_type,
             "scale" => o.scale,
         }
@@ -56,7 +55,11 @@ impl<'a> From<&'a Obj> for JsonValue {
 
 impl Obj {
     pub fn new(obj_type : ObjType, id : u64, pos : V2, vel : V2, time : u64, kind : &str) -> Obj {
-        Obj {obj_type, id, pos, vel, time, kind: kind.to_string(), alive: true, scale: 0.0 }
+        Obj {
+            obj_type, id, pos, vel, time,
+            kind: kind.to_string(), 
+            scale: 1.0, 
+            dirty: true }
     }
 
     pub fn update(&mut self) {

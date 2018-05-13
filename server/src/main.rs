@@ -79,7 +79,7 @@ impl Server {
     pub fn update(&mut self) {
         {
             let mut state = self.state.lock().unwrap();
-            state.update(0.0);
+            let _time = state.update();
         }
 
         let jstate : JsonValue = {
@@ -93,7 +93,7 @@ impl Server {
     pub fn get_time(&self) -> u64 {
         let time = {
             let state = self.state.lock().unwrap();
-            state.clock.time()
+            state.clock.now()
         };
         time
     }

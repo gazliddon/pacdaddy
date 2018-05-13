@@ -40,11 +40,20 @@ pub struct Player {
     last_update: u64,
     scale : f64,
     score : u32,
+    dirty: bool,
 }
 
 impl Player {
     pub fn since_last_update(&self, now : u64) -> f64 {
         (now - self.last_update) as f64 / 1_000_000_000.0
+    }
+
+    pub fn set_dirty(&mut self, v : bool) {
+        self.dirty = v;
+    }
+
+    pub fn is_dirty(&self) -> bool {
+        self.dirty
     }
 
 }
@@ -60,12 +69,29 @@ impl<'a> From<&'a Player> for JsonValue {
     }
 }
 
+
+#[derive(Clone)]
+pub enum EventType {
+    Deleted,
+    Updated,
+    Added,
+}
+
+#[derive(Clone)]
+pub struct Event {
+    pub ev_type : EventType,
+    pub id : u64,
+    pub time : u64,
+}
+
+
 #[derive(Clone)]
 pub struct GameState {
     pub objs : NetworkObjs,
     pub players: HashMap<u64, Player>,
     next_id : u64,
     pub clock: clock::Clock,
+    pub events : Vec<Event>,
 }
 
 impl<'a > From<&'a GameState> for JsonValue {
@@ -95,7 +121,8 @@ impl GameState {
             objs,
             players: HashMap::new(),
             next_id : 0,
-            clock: clock::Clock::new()
+            clock: clock::Clock::new(),
+            events: vec![],
         }
     }
 
@@ -103,17 +130,16 @@ impl GameState {
         self.objs.add(mk_random_pickup())
     }
 
-    pub fn add_player(&mut self, pos : &V2, _time : u64) -> u64 {
-        let obj = Obj::new(ObjType::Player, 0, *pos, V2::new(0.0, 0.0), 0, "player");
-
-        let last_update = self.clock.time();
+    pub fn add_player(&mut self, pos : &V2, time : u64) -> u64 {
+        let obj = Obj::new(ObjType::Player, 0, *pos, V2::new(0.0, 0.0), time, "player");
 
         let id = self.objs.add(obj);
 
         let player = Player {
             id, pos: *pos, scale : 1.0,
-            last_update,
+            last_update : time,
             score: 0,
+            dirty: true,
         };
 
         self.players.insert(id, player);
@@ -121,59 +147,86 @@ impl GameState {
         id
     }
 
-    pub fn update(&mut self, _dt : f64) -> u64 {
-
-        let now = self.clock.time();
+    fn prune_inactive_players(&mut self, time : u64) {
 
         let to_kill : Vec<(u64, u64)> = self.players.iter().filter(|&(_,p)| {
-            let since_last = p.since_last_update(now);
+            let since_last = p.since_last_update(time);
             since_last > 3.0
-
         }).map(|(k,p)| (*k, p.id)).collect();
 
         for (k,ok) in to_kill {
             info!("deleting player {}", ok);
             self.players.remove(&k).unwrap();
-            self.objs.remove(ok);
+            self.remove_obj(ok, time);
         }
+    }
 
-        for (id, p) in &mut self.players {
+    pub fn remove_obj(&mut self, id : u64, time : u64) {
+        self.objs.remove(id);
+        self.events.push( Event {
+            ev_type: EventType::Deleted,
+            id, time
+        });
+    }
+
+    fn collide_pickups(&mut self, _time : u64) {
+        let mut pickup_hit : Vec<(u64, u64)> = vec![];
+
+        for (id, o) in self.objs.objs.iter() {
             use cgmath::prelude::*;
-            let p_pos = p.pos;
 
-            let hit : Vec<u64> = self.objs.objs.iter()
-                .filter(|o| o.obj_type == ObjType::Pickup)
-                .filter(|o| p_pos.distance(o.pos) < 10.0)
-                .map(|o| o.id).collect();
-
-            for pickup_id in hit {
-                p.scale = p.scale * 1.1;
-                self.objs.remove(pickup_id);
-                let obj = mk_random_pickup();
-                self.objs.add(obj);
-            }
-
-            for o in &mut self.objs.objs  {
-                if o.id == *id {
-                    o.scale = p.scale
+            if o.obj_type == ObjType::Pickup {
+                for (pid, p) in self.players.iter() {
+                    if p.pos.distance(o.pos) < 15.0 {
+                        pickup_hit.push((*pid, *id));
+                        break;
+                    }
                 }
             }
         }
 
-        0
+        for &(pid, id) in pickup_hit.iter() {
+            self.objs.remove(id);
+            if let Some(player) = self.players.get_mut(&pid) {
+                player.set_dirty(true);
+                player.scale = player.scale * 1.1;
+            }
+        }
+
+        for (pid, p) in self.players.iter() {
+            if p.is_dirty() {
+                if let Some(o) = self.objs.get_mut(*pid) {
+                    o.pos = p.pos.clone();
+                    o.scale = p.scale;
+                    o.dirty = true;
+                }
+            }
+        }
+    }
+
+    pub fn update(&mut self) -> u64 {
+        let time = self.clock.now();
+
+        self.prune_inactive_players(time);
+        self.collide_pickups(time);
+
+        for (_, p) in self.players.iter_mut() {
+            p.set_dirty(false)
+        }
+
+        time
+    }
+
+
+    pub fn get_updates(&mut self) -> Option<JsonValue> {
+        panic!("")
     }
 
     pub fn update_player(&mut self, id : u64, pos : &V2, _time: u64) {
-
         if let Some(x) = self.players.get_mut(&id) {
             x.pos = pos.clone();
-            x.last_update = self.clock.time();
-        }
-
-        for o in &mut self.objs.objs {
-            if o.id == id {
-                o.pos = pos.clone();
-            }
+            x.last_update = self.clock.now();
+            x.set_dirty(true)
         }
     }
 
