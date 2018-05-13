@@ -47,7 +47,6 @@ class OnScreenItems {
   }
 
   removeSpr (id) {
-    console.log(id)
     let spr = this.objs[id]
     delete this.objs[id]
     spr.kill()

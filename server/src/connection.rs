@@ -141,7 +141,9 @@ impl ws::Handler for Connection {
             "player" => {
                 let x = data["pos"]["x"].as_f64().unwrap();
                 let y = data["pos"]["y"].as_f64().unwrap();
-                state.update_player(client_id, &V2::new(x,y), self.time);
+                let xv = data["vel"]["x"].as_f64().unwrap();
+                let yv = data["vel"]["y"].as_f64().unwrap();
+                state.update_player(client_id, &V2::new(x,y), &V2::new(xv, yv), self.time);
             }
 
             _ => {

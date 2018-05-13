@@ -21,7 +21,6 @@ export default class extends Dispatchable {
   }
 
   onJoined (res, {data, time}) {
-    console.log(data)
     let {game, group} = this
     let {id, pos: {x, y}, name} = data
     this.id = id
@@ -54,9 +53,29 @@ export default class extends Dispatchable {
     this.sendNow(res, 'pong', {id, time})
   }
 
+  removeSpr (id) {
+    let spr = this.objs[id]
+    if (spr) {
+      delete this.objs[id]
+      spr.kill()
+    }
+  }
+
   onEatFruit (res, {id}) {
+    this.removeSpr(id)
     this.sfx.play()
-    this.remove(id)
+  }
+
+  onPlayerUpdate (res, payLoad) {
+    let {pos, vel, id} = payLoad.data
+
+    let o = this.objs[id]
+
+    if (o) {
+      o.pos = pos
+      o.vel = vel
+    } else {
+    }
   }
 
   onState (res, payLoad) {
@@ -78,6 +97,14 @@ export default class extends Dispatchable {
   update (res) {
     let {player, game} = this
 
+    _.forEach(this.objs, (v, k) => {
+      let {pos, vel} = v
+
+      if (vel) {
+        v.pos = P.add(pos, vel)
+      }
+    })
+
     if (player) {
       player.update()
 
@@ -89,6 +116,10 @@ export default class extends Dispatchable {
         pos: {
           x: player.comps.posVel.pos.x,
           y: player.comps.posVel.pos.y
+        },
+        vel: {
+          x: player.comps.posVel.vel.x,
+          y: player.comps.posVel.vel.y
         }
       }
 

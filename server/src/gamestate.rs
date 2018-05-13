@@ -253,10 +253,22 @@ impl GameState {
         panic!("")
     }
 
-    pub fn update_player(&mut self, id : u64, pos : &V2, _time: u64) {
+    pub fn update_player(&mut self, id : u64, pos : &V2, vel: &V2, time: u64) {
         if let Some(x) = self.players.get_mut(&id) {
             x.pos = pos.clone();
             x.last_update = self.clock.now();
+        }
+
+        let data = object!{
+            "id" => id, 
+            "pos" =>  &MyV2(*pos),
+            "vel" => &MyV2(*vel)
+        };
+
+        for (player_id, player) in self.players.iter() { 
+            if *player_id != id {
+                player.send_msg("playerUpdate", time, data.clone() )
+            }
         }
     }
 }

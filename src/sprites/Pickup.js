@@ -44,8 +44,6 @@ export default class extends Spr {
       this.addName(name)
     }
 
-    console.log(name)
-
     group.add(this)
   }
 

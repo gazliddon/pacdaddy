@@ -116,7 +116,6 @@ impl Server {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-
 fn main() {
     use std::env;
     use std::time;
@@ -139,11 +138,10 @@ fn main() {
 
     let mut server = Server::new(&con_str);
 
-    let  pause_time = time::Duration::from_millis(100);
+    let  pause_time = time::Duration::from_millis(300);
 
     loop {
         server.update();
         thread::sleep(pause_time);
     }
-
 }
