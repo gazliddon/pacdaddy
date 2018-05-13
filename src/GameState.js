@@ -54,8 +54,9 @@ export default class extends Dispatchable {
     this.sendNow(res, 'pong', {id, time})
   }
 
-  onEatFruit (res, incoming) {
+  onEatFruit (res, {id}) {
     this.sfx.play()
+    this.remove(id)
   }
 
   onState (res, payLoad) {
