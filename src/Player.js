@@ -35,6 +35,8 @@ export default class Player extends Obj {
       }),
       text: new TextSprComponent({game, pos, text: name})
     }
+    this.name = name
+    this.score = 0
 
     this.ev('start')
   }

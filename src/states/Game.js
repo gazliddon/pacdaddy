@@ -5,6 +5,8 @@ import GameState from '../GameState'
 
 import _ from 'lodash'
 
+import {updatePlayersPanel} from '../Panel'
+
 class OnScreenItems {
   constructor (game) {
     this.game = game
@@ -228,7 +230,9 @@ export default class extends Phaser.State {
   }
 
   render () {
-    let {game} = this
-    // game.debug.cameraInfo(game.camera, 32, 32)
+    let {gameState} = this
+
+    let players = gameState.getPlayers()
+    updatePlayersPanel(players)
   }
 }

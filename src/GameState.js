@@ -15,6 +15,8 @@ export default class extends Dispatchable {
     this.group = game.add.group()
 
     this.sfx = game.add.audio('eat_dot')
+
+    window.gs = this
   }
 
   networkTime (time) {
@@ -75,17 +77,26 @@ export default class extends Dispatchable {
       o.serverPos = pos
       o.serverVel = vel
     }
+
+    this.players[id] = payLoad.data
   }
 
   onState (res, payLoad) {
+    let {id} = this
     let {data: {objs, players}} = payLoad
 
-    this.players = players
+    let newPlayers = {}
+
+    _.forEach(players, p => {
+      newPlayers[p.id] = p
+    })
+
+    this.players = newPlayers
 
     let newObjs = {}
 
     _.forEach(objs, o => {
-      if (o.id !== this.id) {
+      if (o.id !== id) {
         newObjs[o.id] = o
       }
     })
@@ -93,26 +104,35 @@ export default class extends Dispatchable {
     this.objs = newObjs
   }
 
+  getPlayers () {
+    let list = []
+
+    _.forEach(this.players, (v, k) => {
+      let {name, score} = v
+      list.push({name, score})
+    })
+
+    return list
+  }
+
   update (res) {
-    let {player, game} = this
+    let {id, player, game, players} = this
 
     _.forEach(this.objs, (v, k) => {
       let {serverPos, serverVel} = v
 
       if (serverPos && serverVel) {
         serverPos = P.add(serverPos, serverVel)
-
-        // let diff = P.subtract(serverPos, v.pos)
-
-        // diff = P.multiply(diff, new P(0.01, 0.01), diff)
-
         v.pos = serverPos
-
         v.serverPos = serverPos
       }
     })
 
     if (player) {
+      if (players[id]) {
+        player.score = players[id].score
+      }
+
       player.update()
 
       let pspr = player.getSprite()

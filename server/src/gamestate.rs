@@ -38,11 +38,13 @@ fn mk_random_pickup(time : u64) -> Obj {
 pub struct Player {
     id : u64,
     pos : V2,
+    vel : V2,
     frame: u64,
     last_update: u64,
     scale : f64,
     score : u32,
     out : Sender,
+    name : String,
 }
 
 impl Player {
@@ -61,8 +63,10 @@ impl<'a> From<&'a Player> for JsonValue {
         object!{
             "id" => o.id,
             "pos" => &MyV2(o.pos),
+            "vel" => &MyV2(o.vel),
             "scale" => o.scale,
             "score" => o.score,
+            "name" => o.name.clone(),
         }
     }
 }
@@ -140,10 +144,13 @@ impl GameState {
 
         let player = Player {
             id, pos: *pos, scale : 1.0,
+            vel: V2::new(0.0, 0.0),
             last_update : time,
             score: 0,
             frame: 0,
-            out
+            out,
+            name: name.to_string(),
+
         };
 
         self.players.insert(id, player);
@@ -205,7 +212,6 @@ impl GameState {
             pickups_killed = pickups_killed + 1;
             self.remove_obj(pickup_id, time);
 
-
             if let Some(player) = self.players.get_mut(&player_id) {
 
                 let data = object!{
@@ -214,6 +220,7 @@ impl GameState {
 
                 player.send_msg("eatFruit", time, data);
                 player.scale = player.scale * 1.1;
+                player.score = player.score + 30;
             }
         }
 
@@ -224,10 +231,9 @@ impl GameState {
         let time = self.clock.now();
 
         self.prune_inactive_players(time);
+        self.collide_pickups(time);
 
-        let killed = self.collide_pickups(time);
-
-        for _ in 0 .. killed {
+        if self.objs.objs.len() < 100 {
             let obj = mk_random_pickup(time);
             self.add_obj(obj);
         }
@@ -244,7 +250,6 @@ impl GameState {
 
         // At this point I'd flush the events to create a smaller update
         self.events.clear();
-
         None
     }
 
@@ -254,21 +259,17 @@ impl GameState {
     }
 
     pub fn update_player(&mut self, id : u64, pos : &V2, vel: &V2, time: u64) {
+
         if let Some(x) = self.players.get_mut(&id) {
             x.pos = pos.clone();
+            x.vel = vel.clone();
             x.last_update = self.clock.now();
         }
 
-        let data = object!{
-            "id" => id, 
-            "pos" =>  &MyV2(*pos),
-            "vel" => &MyV2(*vel)
-        };
-
-        for (player_id, player) in self.players.iter() { 
-            if *player_id != id {
-                player.send_msg("playerUpdate", time, data.clone() )
-            }
+        for (_player_id, player) in self.players.iter() { 
+            player.send_msg("playerUpdate", time, player.into())
         }
+
+        self.collide_pickups(time);
     }
 }

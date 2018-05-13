@@ -9,11 +9,13 @@
     <meta name="MobileOptimized" content="320">
     <meta http-equiv="cleartype" content="on">
     <meta name="format-detection" content="telephone=no">
+    <link rel="stylesheet" href="/assets/css/reset.css" />
     <style>
         html,
         body {
             margin: 0;
             padding: 0;
+                font-family: "Press Start 2P";
             }
         canvas {
             margin: 0 auto;
@@ -25,15 +27,24 @@
   z-index: 1000;
   color: white;
   background: rgba(0, 0, 255, 0.2);
-  padding: 30px;
 }
+        .overlay span {
+                margin: 1em;
+        }
         
 
     </style>
 </head>
 
 <body>
-    <div class="js-overlay overlay">Hello World</div>
+    <div id="people" class="js-overlay overlay">
+        <ul>
+            <li>
+            <span>Gaz!</span>
+            <span>0</span>
+            </li>
+        </ul>
+    </div>
     <div id="content"></div>
     <!-- uncomment the line bellow for cordova feature -->
     <!-- <script type="text/javascript" src="cordova.js"></script> -->
