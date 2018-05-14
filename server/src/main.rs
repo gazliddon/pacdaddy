@@ -82,10 +82,10 @@ impl Server {
             let _time = state.update();
         }
 
-        // let jstate : JsonValue = {
-        //     let state = self.state.lock().unwrap();
-        //     json::from(&*state)
-        // };
+        let _jstate : JsonValue = {
+            let state = self.state.lock().unwrap();
+            json::from(&*state)
+        };
 
         // self.broadcast("state", jstate).unwrap();
     }
