@@ -219,10 +219,10 @@ impl GameState {
                 };
 
                 player.send_msg("eatFruit", time, data);
-                player.scale = player.scale + 0.2;
+                player.scale = player.scale + 0.05;
 
-                if player.scale > 8.0 {
-                    player.scale = 8.0
+                if player.scale > 10.0 {
+                    player.scale = 10.0
                 }
 
                 player.score = player.score + 30;

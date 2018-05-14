@@ -158,14 +158,14 @@ export default class extends Phaser.State {
 
     let music = game.add.audio('main')
 
-    music.volume = 0.05
+    music.volume = 0.5
     music.loop = true
     music.play()
     this.music = music
 
     this.scaleTarget = 2.4
     this.scale = 0.1
-    this.scaleLerp = 20
+    this.scaleLerp = 100
 
     game.world.setBounds(0, 0, 1920, 1920)
 
@@ -235,8 +235,18 @@ export default class extends Phaser.State {
 
     scale = scale + (scaleTarget - scale) / scaleLerp
 
+    scaleTarget = 1 / (gameState.getPlayerScale() / 5.0)
+
+    if (scaleTarget < 0.2) {
+      scaleTarget = 0.2
+    }
+
+    if (scaleTarget > 3) {
+      scaleTarget = 3
+    }
+
     this.scale = scale
-    this.scaleTarget = (1 / gameState.getPlayerScale()) + 2.0
+    this.scaleTarget = scaleTarget
 
     game.camera.scale.setTo(this.scale)
 
