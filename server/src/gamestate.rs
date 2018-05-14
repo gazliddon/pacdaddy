@@ -200,7 +200,7 @@ impl GameState {
             if obj.obj_type == ObjType::Pickup {
                 for (player_id, player) in self.players.iter() {
                     use cgmath::prelude::*;
-                    if player.pos.distance(obj.pos) < 15.0 {
+                    if player.pos.distance(obj.pos) < (10.0 * player.scale) {
                         pickup_hit.push((*player_id, *object_id));
                         break;
                     }
@@ -219,7 +219,12 @@ impl GameState {
                 };
 
                 player.send_msg("eatFruit", time, data);
-                player.scale = player.scale * 1.1;
+                player.scale = player.scale + 0.2;
+
+                if player.scale > 8.0 {
+                    player.scale = 8.0
+                }
+
                 player.score = player.score + 30;
             }
         }
