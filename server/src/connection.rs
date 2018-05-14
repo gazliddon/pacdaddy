@@ -92,6 +92,13 @@ impl Connection {
     }
 }
 
+
+fn get_v2_from_json(data : &JsonValue) -> Option<V2> {
+    let x = data["x"].as_f64()?;
+    let y = data["y"].as_f64()?;
+    Some(V2::new(x,y))
+}
+
 impl ws::Handler for Connection {
 
     fn on_open(&mut self, _shake: ws::Handshake) -> ws::Result<()> {
@@ -141,11 +148,15 @@ impl ws::Handler for Connection {
             }
 
             "player" => {
-                let x = data["pos"]["x"].as_f64().unwrap();
-                let y = data["pos"]["y"].as_f64().unwrap();
-                let xv = data["vel"]["x"].as_f64().unwrap();
-                let yv = data["vel"]["y"].as_f64().unwrap();
-                state.update_player(client_id, &V2::new(x,y), &V2::new(xv, yv), self.time);
+                let pos = get_v2_from_json(&data["pos"]);
+                let vel = get_v2_from_json(&data["vel"]);
+
+                if pos.is_some() && vel.is_some() {
+
+                    state.update_player(client_id, &pos.unwrap(), &vel.unwrap(), self.time);
+                } else {
+                    warn!("Bad message {:?}", data);
+                }
             }
 
             _ => {
