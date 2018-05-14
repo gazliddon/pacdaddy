@@ -209,6 +209,7 @@ impl GameState {
         }
 
         for &(player_id, pickup_id) in pickup_hit.iter() {
+
             pickups_killed = pickups_killed + 1;
             self.remove_obj(pickup_id, time);
 
