@@ -77,13 +77,9 @@ impl Server {
     }
 
     pub fn update(&mut self) {
-        {
+        let _jstate : JsonValue = {
             let mut state = self.state.lock().unwrap();
             let _time = state.update();
-        }
-
-        let _jstate : JsonValue = {
-            let state = self.state.lock().unwrap();
             json::from(&*state)
         };
 
