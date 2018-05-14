@@ -155,7 +155,7 @@ impl ws::Handler for Connection {
 
                     state.update_player(client_id, &pos.unwrap(), &vel.unwrap(), self.time);
                 } else {
-                    warn!("Bad message {:?}", data);
+                    warn!("Bad message {}", msg_str);
                 }
             }
 
