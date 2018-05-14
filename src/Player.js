@@ -37,6 +37,7 @@ export default class Player extends Obj {
     }
     this.name = name
     this.score = 0
+    this.scale = 1
 
     this.ev('start')
   }
