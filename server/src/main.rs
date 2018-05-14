@@ -76,12 +76,16 @@ impl Server {
         }
     }
 
-    pub fn update(&mut self) {
-        let _jstate : JsonValue = {
-            let mut state = self.state.lock().unwrap();
-            let _time = state.update();
-            json::from(&*state)
-        };
+    pub fn update(&mut self) -> bool {
+
+        let lock = self.state.try_lock();
+
+        if let Ok(mut state) = lock {
+            state.update();
+            true
+        } else {
+            false
+        }
 
         // self.broadcast("state", jstate).unwrap();
     }
@@ -137,7 +141,13 @@ fn main() {
     let  pause_time = time::Duration::from_millis(100);
 
     loop {
-        server.update();
+
+        loop {
+            if server.update() {
+                break;
+            }
+        }
+
         thread::sleep(pause_time);
     }
 }

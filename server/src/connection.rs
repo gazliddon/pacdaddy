@@ -59,6 +59,7 @@ pub struct Connection {
 
 impl Connection {
     pub fn new(out : ws::Sender, state: Arc<Mutex<GameState>>) -> Self {
+
         let time = {
             let mut unlocked = state.lock().unwrap();
             unlocked.clock.now()
@@ -98,6 +99,7 @@ impl ws::Handler for Connection {
     }
 
     fn on_message(&mut self, msg: ws::Message) -> ws::Result<()> {
+
         let mut state = self.state.lock().unwrap();
 
         self.time = state.clock.now();
