@@ -87,7 +87,7 @@ impl Server {
             json::from(&*state)
         };
 
-        self.broadcast("state", jstate).unwrap();
+        // self.broadcast("state", jstate).unwrap();
     }
 
     pub fn get_time(&self) -> u64 {

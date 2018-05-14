@@ -1,11 +1,14 @@
 import Phaser from 'phaser'
-import {centerGameObjects} from '../utils'
+// import {centerGameObjects} from '../utils'
 import {makeSocketRetry} from '../Socket'
 import StateMachine from '../StateMachine'
+import _ from 'lodash'
 
 const table = {
   start: { nothing: 'clickMe' },
-  click: { clickMe: 'connecting' },
+  changeName: {clickMe: 'changeName'},
+  playGame: { clickMe: 'connecting' },
+  done: {changeName: 'clickMe'},
   retry: { connecting: 'retry', retry: 'retry' },
   connected: { connecting: 'fading', retry: 'fading' },
   fadeComplete: { fading: 'startGame' }
@@ -54,11 +57,14 @@ export default class extends Phaser.State {
   onClickMe () {
   }
 
-  onConnecting () {
+  onChangeName () {
     let ls = window.localStorage
     let person = prompt('Please enter your name', ls.name)
     ls.name = person
+    this.sm.ev('done')
+  }
 
+  onConnecting () {
     const onRetry = (_, trys) => {
       this.sm.ev('retry', trys)
     }
@@ -68,7 +74,6 @@ export default class extends Phaser.State {
     }
 
     const onError = (err) => {
-      this.banner.text = 'sad face'
       console.log('this is an error')
       console.log(err)
     }
@@ -79,12 +84,10 @@ export default class extends Phaser.State {
   }
 
   onRetry (tries) {
-    this.banner.text = this.bannerText + ' ' + tries
   }
 
   onFading (socket) {
     this.music.fadeOut(1000)
-    this.banner.text = 'connected!'
     this.camera.fade('#000000')
     this.camera.onFadeComplete.add(() => {
       this.sm.ev('fadeComplete', socket, window.localStorage.name)
@@ -107,8 +110,10 @@ export default class extends Phaser.State {
   }
 
   mkMenuItem (x, y, text, ev) {
-    let banner = this.add.text(x, y, text, {
-      font: '80px Bungee Shade',
+    let {game} = this
+
+    let banner = game.add.text(x, y, text, {
+      font: '60px Bungee Shade',
       fill: '#eee',
       smoothed: false
     })
@@ -116,19 +121,26 @@ export default class extends Phaser.State {
     banner.padding.set(10, 16)
     banner.anchor.setTo(0.5)
     banner.inputEnabled = true
+
     banner.events.onInputDown.add(() => {
       this.sm.ev(ev)
     })
+
+    banner.events.onInputOver.add(() => {
+      banner.fill = '#eee'
+    }, this)
+
+    banner.events.onInputOut.add(() => {
+      banner.fill = '#aaa'
+    }, this)
   }
 
   mkMenu (table, x, y) {
-    let menu = []
-
-    table.forEach(({text, ev}) => {
-      menu.push(this.mkMenuItem(x, y, text, ev))
+    return _.map(table, ({text, ev}) => {
+      let m = this.mkMenuItem(x, y, text, ev)
+      y = y + 80
+      return m
     })
-
-    return menu
   }
 
   create () {
@@ -136,18 +148,12 @@ export default class extends Phaser.State {
 
     let music = this.add.audio('title')
 
-    this.bannerText = 'CLICK ME'
+    let table = [
+      { text: 'PLAY', ev: 'playGame' },
+      { text: 'CHANGE NAME', ev: 'changeName' }
+    ]
 
-    let banner = this.add.text(world.centerX, game.height - 80, this.bannerText, {
-      font: '80px Bungee Shade',
-      fill: '#eee',
-      smoothed: false
-    })
-
-    banner.padding.set(10, 16)
-    banner.anchor.setTo(0.5)
-    banner.inputEnabled = true
-    this.banner = banner
+    this.menu = this.mkMenu(table, world.centerX, game.height - 180)
 
     music.volume = 0.1
     music.loop = true
@@ -156,15 +162,6 @@ export default class extends Phaser.State {
 
     world.setBounds(0, 0, game.canvas.clientWidth, game.canvas.clientHeight)
     this.title = this.makeTitle()
-
-    this.banner.events.onInputDown.add(() => {
-      this.banner.inputEnabled = false
-      this.sm.ev('click')
-    })
-
-    this.title.events.onInputOver.add(() => {
-      // this.title.tint = Math.random() * 0xffffff
-    })
 
     this.sm.ev('start')
   }

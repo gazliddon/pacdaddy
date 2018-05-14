@@ -57,13 +57,13 @@ export default class extends Dispatchable {
 
   removeSpr (id) {
     let spr = this.objs[id]
+
     if (spr) {
       delete this.objs[id]
-      spr.kill()
     }
   }
 
-  onEatFruit (res, {id}) {
+  onEatFruit (res, { data: {id} }) {
     this.removeSpr(id)
     this.sfx.play()
   }
