@@ -163,10 +163,11 @@ export default class extends Phaser.State {
     music.play()
     this.music = music
 
-    let scale = 2.4
+    this.scaleTarget = 2.4
+    this.scale = 0.1
+    this.scaleLerp = 20
 
     game.world.setBounds(0, 0, 1920, 1920)
-    game.camera.scale.setTo(scale)
 
     this.makeStars(1000)
     this.makeBanner()
@@ -230,7 +231,14 @@ export default class extends Phaser.State {
   }
 
   render () {
-    let {gameState} = this
+    let {gameState, game, scale, scaleTarget, scaleLerp} = this
+
+    scale = scale + (scaleTarget - scale) / scaleLerp
+
+    this.scale = scale
+    this.scaleTarget = (1 / gameState.getPlayerScale()) + 2.0
+
+    game.camera.scale.setTo(this.scale)
 
     let players = gameState.getPlayers()
     updatePlayersPanel(players)

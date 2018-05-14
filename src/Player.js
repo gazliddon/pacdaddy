@@ -41,6 +41,16 @@ export default class Player extends Obj {
     this.ev('start')
   }
 
+  setScale (n) {
+    let {scale} = this.comps
+    scale.setTarget(n)
+    this.scale = n
+  }
+
+  getScale () {
+    return this.scale
+  }
+
   getSprite () {
     return this.comps.spr.spr
   }
@@ -104,7 +114,7 @@ export default class Player extends Obj {
     spr.setPos(posVel.pos)
     spr.update()
 
-    text.setPos(new P(posVel.pos.x, posVel.pos.y - 10))
+    text.setPos(new P(posVel.pos.x, posVel.pos.y - 10 * scale.scale))
     text.update()
   }
 }

@@ -15,6 +15,15 @@ export default class ScaleComponent {
     this.scale = this.scale + diff
   }
 
+  setTarget (n) {
+    this.target = n
+  }
+
+  setScale (n) {
+    this.target = n
+    this.scale = n
+  }
+
   setFlipX (val) {
     this.flipX = val
   }
@@ -24,8 +33,8 @@ export default class ScaleComponent {
   }
 
   getScale () {
-    let scaleX = this.scale * this.flipX ? -1 : 1
-    let scaleY = this.scale * this.flipY ? -1 : 1
+    let scaleX = this.scale * (this.flipX ? -1 : 1)
+    let scaleY = this.scale * (this.flipY ? -1 : 1)
     return new P(scaleX, scaleY)
   }
 }

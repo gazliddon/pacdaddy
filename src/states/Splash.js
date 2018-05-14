@@ -106,6 +106,31 @@ export default class extends Phaser.State {
     return title
   }
 
+  mkMenuItem (x, y, text, ev) {
+    let banner = this.add.text(x, y, text, {
+      font: '80px Bungee Shade',
+      fill: '#eee',
+      smoothed: false
+    })
+
+    banner.padding.set(10, 16)
+    banner.anchor.setTo(0.5)
+    banner.inputEnabled = true
+    banner.events.onInputDown.add(() => {
+      this.sm.ev(ev)
+    })
+  }
+
+  mkMenu (table, x, y) {
+    let menu = []
+
+    table.forEach(({text, ev}) => {
+      menu.push(this.mkMenuItem(x, y, text, ev))
+    })
+
+    return menu
+  }
+
   create () {
     let {game, world} = this
 

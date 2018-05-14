@@ -115,6 +115,16 @@ export default class extends Dispatchable {
     return list
   }
 
+  getPlayerScale () {
+    let {player} = this
+
+    if (player) {
+      return player.getScale()
+    } else {
+      return 1
+    }
+  }
+
   update (res) {
     let {id, player, game, players} = this
 
@@ -131,6 +141,7 @@ export default class extends Dispatchable {
     if (player) {
       if (players[id]) {
         player.score = players[id].score
+        player.setScale(players[id].scale)
       }
 
       player.update()
