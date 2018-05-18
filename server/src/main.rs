@@ -2,7 +2,6 @@
 
 extern crate env_logger;
 #[macro_use] extern crate structopt;
-
 #[macro_use] extern crate log;
 #[macro_use] extern crate json;
 
@@ -22,136 +21,39 @@ mod msgbatch;
 mod player;
 mod serial;
 mod v2;
+mod opts;
 
-use json::JsonValue;
-
-use std::sync::{ Arc, Mutex };
-use gamestate::{GameState};
-use std::thread;
-use connection::{Connection};
-use structopt::StructOpt;
-
-#[derive(StructOpt, Debug)]
-#[structopt(name = "basic")]
-struct Opts {
-    #[structopt(short = "v", long = "verbose", parse(from_occurrences))]
-    verbose: u8, 
-
-    /// admin_level to consider
-    #[structopt(short = "h", long = "host")]
-    host: Option<String>,
-
-     /// Number of cars
-    #[structopt(short = "p", long = "port")]
-    port: Option<u32>,
-}
-
-pub struct Server {
-    state: Arc<Mutex<GameState>>,
-    broadcaster : ws::Sender,
-    ping_id : u64,
-}
-
-impl Server {
-    pub fn new(con_str : &str) -> Server {
-
-        let url = url::Url::parse(con_str).unwrap();
-
-        let raw_state = GameState::new();
-
-        let state =  Arc::new(Mutex::new(raw_state));
-
-        let ws_state = Arc::clone(&state);
-
-        let ws = ws::WebSocket::new( move |out | {
-            Connection::new(out, Arc::clone(&ws_state))
-        }).unwrap();
-
-        let broadcaster = ws.broadcaster();
-
-        let _th = thread::spawn(move || {
-            ws.listen(url).unwrap();
-        });
-
-        Server {
-            state: Arc::clone(&state),
-            broadcaster, 
-            ping_id: 0,
-        }
-    }
-
-    pub fn update(&mut self) -> bool {
-
-        let lock = self.state.try_lock();
-
-        if let Ok(mut state) = lock {
-            state.update();
-            true
-        } else {
-            false
-        }
-
-        // self.broadcast("state", jstate).unwrap();
-    }
-
-    pub fn get_time(&self) -> u64 {
-        let time = {
-            let state = self.state.lock().unwrap();
-            state.clock.now()
-        };
-        time
-    }
-
-    pub fn broadcast(&mut self, msg : &str, j : JsonValue ) -> ws::Result<()> {
-        let time = self.get_time();
-        let msg_string = utils::mk_msg(msg, time, j);
-        self.broadcaster.send(msg_string)
-    }
-
-    pub fn ping(&mut self) -> ws::Result<()> {
-        let pmsg = object!{
-            "id" => self.ping_id,
-        };
-
-        self.ping_id += 1;
-        self.broadcast("ping",pmsg)
-    }
-}
 
 ////////////////////////////////////////////////////////////////////////////////
 
 fn main() {
-    use std::env;
-    use std::time;
+    use std;
+    use std::sync::{ Arc };
+    use gamestate::make_gamestate;
+    use server::{listen};
+    use std::time::Duration;
 
-    let opts = Opts::from_args();
+    let opts = opts::Opts::new();
 
-    if opts.verbose > 0 {
-        env::set_var("RUST_LOG", "info");
-    }
+    let state =  make_gamestate();
+    let thread_state = Arc::clone(&state);
 
-    env_logger::init();
+    let refresh = Duration::from_millis(opts.get_rate_millis());
+
+    std::thread::spawn(move || {
+        loop {
+            {
+                let mut unlocked_state = thread_state.lock().unwrap();
+                unlocked_state.update();
+            }
+            std::thread::sleep(refresh);
+        }
+    });
 
     // A WebSocket echo server
-    let port = opts.port.unwrap_or(6502);
-    let host = opts.host.unwrap_or("localhost".to_string());
+    let host = opts.get_host();
+    let port = opts.get_port();
 
-    let con_str = format!("ws:/{}:{}", host, port);
-
-    info!("Starting a simpleserver on port {}", port);
-
-    let mut server = Server::new(&con_str);
-
-    let  pause_time = time::Duration::from_millis(100);
-
-    loop {
-
-        loop {
-            if server.update() {
-                break;
-            }
-        }
-
-        thread::sleep(pause_time);
-    }
+    let ws = listen(&host, port, &state).unwrap();
+    ws::WebSocket::run(ws).unwrap();
 }

@@ -8,6 +8,7 @@ use v2::{V2};
 use msgbatch::{MsgBatch};
 use player::{Player};
 use json;
+use std::sync::{ Arc, Mutex };
 
 fn mk_random_vec() -> V2 {
     use rand::distributions::{IndependentSample, Range};
@@ -197,4 +198,8 @@ impl GameState {
         self.collide_pickups(time);
         // TODO flush here
     }
+}
+
+pub fn make_gamestate() -> Arc<Mutex<GameState>> {
+    Arc::new(Mutex::new(GameState::new()))
 }

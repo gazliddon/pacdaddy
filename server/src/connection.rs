@@ -2,10 +2,9 @@ use json::JsonValue;
 use std::sync::{ Arc, Mutex };
 use gamestate::{GameState};
 use json;
-use ws::{Sender};
+// use ws::{Sender};
 use ws;
 // use networkobjs::{NetworkObjs};
-use utils::{mk_msg};
 
 use v2::V2;
 
@@ -48,9 +47,8 @@ impl RttStats {
 
 
 pub struct Connection {
-    out : Sender,
     state : Arc<Mutex<GameState>>,
-    time : u64,
+    nw_id: u64,
 
     rtt: Vec<f64>,
     rtt_avg : f64,
@@ -59,25 +57,16 @@ pub struct Connection {
 
 
 impl Connection {
-    pub fn new(out : ws::Sender, state: Arc<Mutex<GameState>>) -> Self {
-        let time = {
+    pub fn new(state: Arc<Mutex<GameState>>) -> Self {
+        let nw_id  = {
             let mut unlocked = state.lock().unwrap();
-            unlocked.clock.now()
+            unlocked.get_nw_id()
         };
 
         let mut rtt = vec![];
         rtt.reserve(20);
 
-        Self { out, time, state, rtt, rtt_avg: 0.0, rtt_peak: 0.0 }
-    }
-
-    pub fn send(&self, msg : &str) -> ws::Result<()> {
-        self.out.send(msg)
-    }
-
-    pub fn send_msg(&self, msg : &str, data : json::JsonValue) -> ws::Result<()> {
-        let msg_string = mk_msg(msg, self.time, data);
-        self.send(&msg_string)
+        Self { state, rtt, rtt_avg: 0.0, rtt_peak: 0.0, nw_id }
     }
 
     fn add_rtt(&mut self, new_rtt : f64) {
@@ -89,6 +78,10 @@ impl Connection {
         let sum : f64 = self.rtt.iter().sum();
         let avg = sum / self.rtt.len() as f64;
         self.rtt_avg = avg;
+    }
+
+    pub fn get_id(&self ) -> u64 {
+        self.nw_id
     }
 }
 
@@ -107,9 +100,9 @@ impl ws::Handler for Connection {
     }
 
     fn on_message(&mut self, msg: ws::Message) -> ws::Result<()> {
-
         let mut state = self.state.lock().unwrap();
-        self.time = state.clock.now();
+
+        let time = state.clock.now();
 
         let parsed = json::parse(&msg.to_string()).unwrap();
 
@@ -124,7 +117,7 @@ impl ws::Handler for Connection {
             "hello" => {
                 let pos = V2::new(100.0,100.0);
                 let name = data["name"].to_string();
-                state.add_player(&name, &pos,  self.time);
+                state.add_player(&name, &pos, time);
             }
 
             "pong" => {
@@ -142,7 +135,7 @@ impl ws::Handler for Connection {
 
                 if pos.is_some() && vel.is_some() {
 
-                    state.update_player(client_id, &pos.unwrap(), &vel.unwrap(), self.time);
+                    state.update_player(client_id, &pos.unwrap(), &vel.unwrap(), time);
                 } else {
                     warn!("Bad message {}", msg);
                 }
