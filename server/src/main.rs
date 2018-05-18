@@ -11,13 +11,17 @@ extern crate cgmath;
 extern crate rand;
 extern crate url;
 
-mod obj;
+mod pickup;
 mod clock;
 mod networkobjs;
 mod gamestate;
 mod server;
 mod connection;
 mod utils;
+mod msgbatch;
+mod player;
+mod serial;
+mod v2;
 
 use json::JsonValue;
 
@@ -100,7 +104,7 @@ impl Server {
 
     pub fn broadcast(&mut self, msg : &str, j : JsonValue ) -> ws::Result<()> {
         let time = self.get_time();
-        let msg_string = utils::mk_msg(msg, j, time);
+        let msg_string = utils::mk_msg(msg, time, j);
         self.broadcaster.send(msg_string)
     }
 

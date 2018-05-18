@@ -1,16 +1,16 @@
-use networkobjs::NetworkObjs;
 use std::collections::HashMap;
 use json::JsonValue;
 use rand;
-use obj::{Obj, V2, MyV2, ObjType};
+use pickup::{Pickup, PickupType};
 use clock;
-use ws::{Sender};
+use v2::{V2};
+
+use msgbatch::{MsgBatch};
+use player::{Player};
 use json;
-use utils::{mk_msg};
 
 fn mk_random_vec() -> V2 {
     use rand::distributions::{IndependentSample, Range};
-
     let between = Range::new(0.0f64, 1000.0);
     let mut rng = rand::thread_rng();
     let x = between.ind_sample(&mut rng);
@@ -18,219 +18,160 @@ fn mk_random_vec() -> V2 {
     V2::new(x,y)
 }
 
-fn mk_random_pickup(time : u64) -> Obj {
+fn mk_random_pickup(time : u64) -> Pickup {
     use rand::Rng;
 
     let names = vec![
-        "burger","coke", "pizza"
+        PickupType::Coke,
+        PickupType::Pizza,
+        PickupType::Burger,
     ];
 
-    let obj_type = rand::thread_rng().choose(&names);
+    let obj_type = rand::thread_rng().choose(&names).unwrap();
 
-    Obj::new(ObjType::Pickup, 0, mk_random_vec(), V2::new(0.0,0.0), time, obj_type.unwrap())
+    Pickup::new(obj_type.clone(), 0, mk_random_vec(), time)
 }
 
 
 ////////////////////////////////////////////////////////////////////////////////
 
-
-#[derive(Clone)]
-pub struct Player {
-    id : u64,
-    pos : V2,
-    vel : V2,
-    frame: u64,
-    last_update: u64,
-    scale : f64,
-    score : u32,
-    out : Sender,
-    name : String,
-}
-
-impl Player {
-    pub fn since_last_update(&self, now : u64) -> f64 {
-        (now - self.last_update) as f64 / 1_000_000_000.0
-    }
-
-    pub fn send_msg(&self, msg : &str, time: u64, data : json::JsonValue) {
-        let msg_string = mk_msg(msg, data, time);
-        self.out.send(msg_string).unwrap();
-    }
-}
-
-impl<'a> From<&'a Player> for JsonValue {
-    fn from(o : &'a Player) -> JsonValue {
-        object!{
-            "id" => o.id,
-            "pos" => &MyV2(o.pos),
-            "vel" => &MyV2(o.vel),
-            "scale" => o.scale,
-            "score" => o.score,
-            "name" => o.name.clone(),
-        }
-    }
-}
-
-
-#[derive(Clone)]
-pub enum EventType {
-    Deleted,
-    Updated(Obj),
-    Added(Obj),
-}
-
-#[derive(Clone)]
-pub struct Event {
-    pub ev_type : EventType,
-    pub id : u64,
-    pub time : u64,
-}
-
-
-#[derive(Clone)]
 pub struct GameState {
-    pub objs : NetworkObjs,
     pub players: HashMap<u64, Player>,
-    next_id : u64,
+    new_next_id : u64,
     pub clock: clock::Clock,
-    pub events : Vec<Event>,
+    pub pickups : HashMap<u64, Pickup>,
+    msg_batch : MsgBatch,
 }
 
-impl<'a > From<&'a GameState> for JsonValue {
-    fn from(o : &'a GameState) -> JsonValue {
+impl GameState {
 
-        let players : Vec<&'a Player> = o.players.iter().map(|(_k,v)| v).collect();
+    pub fn broadcast(&mut self, msg : &str, jdata :  JsonValue) {
+        self.msg_batch.broadcast(msg, jdata)
+    }
 
-        let jobjs = JsonValue::from(&o.objs);
+    pub fn send(&mut self, player_id : u64, msg : &str, jdata :  JsonValue) {
+        use msgbatch::Destination::*;
+        self.msg_batch.send(Connection(player_id), msg, jdata)
+    }
 
-        let ret = object!{
-            "objs" => jobjs,
-            "time" => 0,
-            "players" => players
-        };
+    pub fn get_nw_id(&mut self) -> u64 {
+        let ret = self.new_next_id;
+        self.new_next_id = self.new_next_id + 1;
         ret
+    }
+
+    pub fn add_random_pickup(&mut self, time : u64) -> u64 {
+        let p = mk_random_pickup(time);
+        self.add_pickup(p)
+    }
+
+    pub fn add_pickup(&mut self, pickup : Pickup) -> u64 {
+        let mut pickup = pickup.clone();
+        let id = self.get_nw_id();
+        pickup.id = id;
+        let json = json::from(&pickup);
+        self.pickups.insert(id, pickup);
+        self.broadcast("newPickup",json);
+        id
+    }
+
+    pub fn remove_pickup(&mut self, id : u64) {
+        if let Some(pickup) = self.pickups.get(&id) {
+            info!("removing pickup: {}, type: {:?}", id, pickup.pickup_type );
+        } else {
+            warn!("failure to remove pickup {}", id );
+        }
+
+        let _ = self.pickups.remove(&id);
+        self.broadcast("removePickup", object!{ "id" => id });
+    }
+
+    pub fn add_player(&mut self, name: &str, pos : &V2, time : u64) -> u64 {
+        let id = self.get_nw_id();
+        let player = Player::new(id, time, name, *pos);
+        let pjson : JsonValue = json::from(&player);
+        self.players.insert(id, player);
+
+        self.send(id, "hello", pjson);
+        let jstate : JsonValue = json::from(&*self);
+        self.broadcast("state", jstate);
+        id
+    }
+
+    pub fn remove_player(&mut self, id : u64) {
+        info!("deleting player {}", id);
+        self.players.remove(&id).unwrap();
+        self.broadcast("removePlayer", object!{ "id" => id });
+    }
+
+    pub fn get_player_json(&self, player_id : u64) -> Option<JsonValue> {
+        let player = self.players.get(&player_id)?;
+        Some(json::from(player))
+    }
+
+    pub fn change_player(&mut self, id : u64, func : &Fn(&mut Player) ) {
+        if let Some(p) = self.players.get_mut(&id) { 
+            func(p);
+        }
+
+        if let Some(pjson) = self.get_player_json(id) {
+            self.broadcast("changePlayer", pjson);
+        }
     }
 }
 
 impl GameState {
+
     pub fn new() -> Self {
         let mut ret = Self {
-            objs : NetworkObjs::new(),
             players: HashMap::new(),
-            next_id : 0,
+            new_next_id : 0,
             clock: clock::Clock::new(),
-            events: vec![],
+            pickups: HashMap::new(),
+            msg_batch : MsgBatch::new(),
         };
 
+        let time = ret.clock.now();
+
         for _ in 0..100 {
-            let obj = mk_random_pickup(0);
-            ret.add_obj(obj);
+            ret.add_random_pickup(time);
         }
 
         ret
     }
 
-    pub fn add_obj(&mut self, obj : Obj) -> u64 {
-        self.objs.add(obj)
-    }
-
-    pub fn add_player(&mut self, name: &str, pos : &V2, time : u64, out : Sender) -> u64 {
-
-        let mut obj = Obj::new(ObjType::Player, 0, *pos, V2::new(0.0, 0.0), time, "player");
-
-        obj.name = Some(name.to_string());
-
-        let id = self.objs.add(obj);
-
-        let player = Player {
-            id, pos: *pos, scale : 1.0,
-            vel: V2::new(0.0, 0.0),
-            last_update : time,
-            score: 0,
-            frame: 0,
-            out,
-            name: name.to_string(),
-
-        };
-
-        self.players.insert(id, player);
-
-        id
-    }
-
     fn prune_inactive_players(&mut self, time : u64) {
-
-        let to_kill : Vec<(u64, u64)> = self.players.iter().filter(|&(_,p)| {
+        let to_kill : Vec<u64> = self.players.iter().filter(|&(_,p)| {
             let since_last = p.since_last_update(time);
             since_last > 3.0
-        }).map(|(k,p)| (*k, p.id)).collect();
+        }).map(|(k,_p)| *k).collect();
 
-        for (k,ok) in to_kill {
-            info!("deleting player {}", ok);
-            self.players.remove(&k).unwrap();
-            self.remove_obj(ok, time);
+        for id in to_kill {
+            self.remove_player(id);
         }
     }
 
-    pub fn remove_obj(&mut self, id : u64, time : u64) {
-        self.objs.remove(id);
-        self.events.push( Event {
-            ev_type: EventType::Deleted,
-            id, time
-        });
-    }
+    fn collide_pickups(&mut self, _time : u64) {
 
-    pub fn update_obj(&mut self, id : u64, time : u64) {
-        if let Some(obj) = self.objs.get(id) {
-            self.events.push( Event {
-                ev_type: EventType::Updated(obj.clone()),
-                id, time
-            });
-        } else {
-            warn!("Could not update obj id: {}", id);
-        }
-    }
-
-    fn collide_pickups(&mut self, time : u64) -> usize {
+        // TODO REVIEW this is very suspect
         let mut pickup_hit : Vec<(u64, u64)> = vec![];
 
-        let mut pickups_killed = 0;
-
-        for (object_id, obj) in self.objs.objs.iter() {
-            if obj.obj_type == ObjType::Pickup {
-                for (player_id, player) in self.players.iter() {
-                    use cgmath::prelude::*;
-                    if player.pos.distance(obj.pos) < (10.0 * player.scale) {
-                        pickup_hit.push((*player_id, *object_id));
-                        break;
-                    }
+        for (object_id, obj) in self.pickups.iter() {
+            for (player_id, player) in self.players.iter() {
+                if player.did_collide(&obj.pos, 0.0) {
+                    pickup_hit.push((*player_id, *object_id));
+                    break;
                 }
             }
         }
 
         for &(player_id, pickup_id) in pickup_hit.iter() {
-
-            pickups_killed = pickups_killed + 1;
-            self.remove_obj(pickup_id, time);
-
-            if let Some(player) = self.players.get_mut(&player_id) {
-
-                let data = object!{
-                    "id" => pickup_id,
-                };
-
-                player.send_msg("eatFruit", time, data);
-                player.scale = player.scale + 0.05;
-
-                if player.scale > 10.0 {
-                    player.scale = 10.0
-                }
-
-                player.score = player.score + 30;
-            }
+            self.remove_pickup(pickup_id);
+            self.change_player(player_id, &|player| {
+                player.increase_scale();
+                player.add_points(30);
+            });
         }
-
-        pickups_killed
     }
 
     pub fn update(&mut self) -> Option<JsonValue> {
@@ -239,43 +180,21 @@ impl GameState {
         self.prune_inactive_players(time);
         self.collide_pickups(time);
 
-        if self.objs.objs.len() < 100 {
-            let obj = mk_random_pickup(time);
-            self.add_obj(obj);
+        if self.pickups.len() < 100 {
+            self.add_random_pickup(time);
         }
 
-        // update player objs
-        
-        for (pid, p) in self.players.iter() {
-            if let Some(o) = self.objs.get_mut(*pid) {
-                o.pos = p.pos.clone();
-                o.scale = p.scale;
-                o.dirty = true;
-            }
-        }
-
-        // At this point I'd flush the events to create a smaller update
-        self.events.clear();
+        // TODO flush here
         None
-    }
-
-
-    pub fn get_updates(&mut self) -> Option<JsonValue> {
-        panic!("")
     }
 
     pub fn update_player(&mut self, id : u64, pos : &V2, vel: &V2, time: u64) {
 
-        if let Some(x) = self.players.get_mut(&id) {
-            x.pos = pos.clone();
-            x.vel = vel.clone();
-            x.last_update = self.clock.now();
-        }
-
-        for (_player_id, player) in self.players.iter() { 
-            player.send_msg("playerUpdate", time, player.into())
-        }
+        self.change_player(id, &|p| {
+            p.update(time, pos, vel);
+        });
 
         self.collide_pickups(time);
+        // TODO flush here
     }
 }

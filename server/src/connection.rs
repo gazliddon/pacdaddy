@@ -6,7 +6,8 @@ use ws::{Sender};
 use ws;
 // use networkobjs::{NetworkObjs};
 use utils::{mk_msg};
-use obj::{V2, MyV2};
+
+use v2::V2;
 
 struct RttStats {
     max_samples: usize,
@@ -59,7 +60,6 @@ pub struct Connection {
 
 impl Connection {
     pub fn new(out : ws::Sender, state: Arc<Mutex<GameState>>) -> Self {
-
         let time = {
             let mut unlocked = state.lock().unwrap();
             unlocked.clock.now()
@@ -76,7 +76,7 @@ impl Connection {
     }
 
     pub fn send_msg(&self, msg : &str, data : json::JsonValue) -> ws::Result<()> {
-        let msg_string = mk_msg(msg, data, self.time);
+        let msg_string = mk_msg(msg, self.time, data);
         self.send(&msg_string)
     }
 
@@ -102,13 +102,13 @@ fn get_v2_from_json(data : &JsonValue) -> Option<V2> {
 impl ws::Handler for Connection {
 
     fn on_open(&mut self, _shake: ws::Handshake) -> ws::Result<()> {
+        // TODO get a player ID right here!!!
         Ok(())
     }
 
     fn on_message(&mut self, msg: ws::Message) -> ws::Result<()> {
 
         let mut state = self.state.lock().unwrap();
-
         self.time = state.clock.now();
 
         let parsed = json::parse(&msg.to_string()).unwrap();
@@ -124,18 +124,7 @@ impl ws::Handler for Connection {
             "hello" => {
                 let pos = V2::new(100.0,100.0);
                 let name = data["name"].to_string();
-
-                let id = state.add_player(&name, &pos,  self.time, self.out.clone());
-
-                let payload = object!{
-                    "id" => id,
-                    "pos" => &MyV2(pos),
-                    "name" => name,
-                };
-
-                let jstate : JsonValue = json::from(&*state);
-                self.send_msg("joined", payload)?;
-                self.send_msg("state", jstate)?;
+                state.add_player(&name, &pos,  self.time);
             }
 
             "pong" => {
