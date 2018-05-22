@@ -1,10 +1,10 @@
-use messages::types::*;
+use messages::payloads::*;
 
 pub enum Payload {
     Nothing,
     Unknown(String),
-    Hello(String),
-    State(GameState),
+    Hello(HelloInfo),
+    State(GameStateInfo),
     Delete(u64),
     Ping,
     Pong(u64),

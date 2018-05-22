@@ -1,7 +1,11 @@
 use v2::V2;
 
+pub struct HelloInfo {
+    pub name : String, 
+}
+
 pub struct PlayerInfo {
-    pub id : u64,
+    pub uuid : u64,
     pub pos: V2,
     pub frame: u32,
     pub score: u64,
@@ -10,12 +14,12 @@ pub struct PlayerInfo {
 }
 
 pub struct PickupInfo {
-    pub id: u64,
+    pub uuid: u64,
     pub kind: String,
     pub pos: V2,
 }
 
-pub struct GameState {
+pub struct GameStateInfo {
     pub players: Vec<PlayerInfo>,
     pub pickups: Vec<PickupInfo>,
 }

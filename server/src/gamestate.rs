@@ -84,16 +84,18 @@ impl GameState {
         use messages::Payload::*;
 
         match msg.data {
-            Nothing => "nothing",
-            Unknown(_) => "uknown",
-            Hello(_) => "hello",
-            PlayerInfo(_) => "playerInfo",
-            State(_) => "state",
-            Delete(_) => "delete",
-            Ping => "ping",
-            Pong(_) => "pong",
-            PickupInfo(_) => "pickupInfo",
-            PlayerUpdate(_) => "palyerUpdate",
+            Hello(_hello_payload) => {
+            }
+
+            Nothing => {},
+            Unknown(_) => {},
+            PlayerInfo(_) => {},
+            State(_) => {},
+            Delete(_) => {},
+            Ping => {},
+            Pong(_) => {},
+            PickupInfo(_) => {},
+            PlayerUpdate(_) => {},
         };
     }
 
@@ -109,7 +111,7 @@ impl GameState {
         let _message = Message::new(data, id, 0);
     }
 
-    pub fn get_nw_id(&mut self) -> u64 {
+    pub fn get_uuid(&mut self) -> u64 {
         let ret = self.new_next_id;
         self.new_next_id = self.new_next_id + 1;
         ret
@@ -122,8 +124,8 @@ impl GameState {
 
     pub fn add_pickup(&mut self, pickup : Pickup) -> u64 {
         let mut pickup = pickup.clone();
-        let id = self.get_nw_id();
-        pickup.id = id;
+        let id = self.get_uuid();
+        pickup.uuid = id;
         self.broadcast(Payload::PickupInfo((&pickup).into()));
         self.pickups.insert(id, pickup);
         id
@@ -140,12 +142,15 @@ impl GameState {
         self.broadcast(Payload::Delete(id));
     }
 
-    pub fn add_player(&mut self, name: String, pos : V2, time : u64) -> u64 {
-        let id = self.get_nw_id();
-        let player = Player::new(id, time, &name, pos.clone());
+    pub fn add_session(&mut self, _connection_id : u64) {
+    }
+
+    pub fn add_player(&mut self, session_id : u64,  name : String, pos : V2, time : u64) -> u64 {
+        let uuid = self.get_uuid();
+        let player = Player::new(session_id, uuid, time, &name, pos.clone());
         self.broadcast(Payload::PlayerInfo((&player).into()));
-        self.players.insert(id, player);
-        id
+        self.players.insert(uuid, player);
+        uuid
     }
 
     pub fn remove_player(&mut self, id : u64) {

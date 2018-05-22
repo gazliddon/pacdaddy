@@ -23,7 +23,7 @@ impl<'a> From<&'a MyV2> for JsonValue {
 impl<'a> From<&'a Pickup> for JsonValue {
     fn from(o : &'a Pickup) -> JsonValue {
         object!{
-            "id" => o.id,
+            "uuid" => o.uuid,
             "pos" => &MyV2(o.pos),
             "time" => o.time,
             "pickupType" => &o.pickup_type,
@@ -36,7 +36,7 @@ use player::Player;
 impl<'a> From<&'a Player> for JsonValue {
     fn from(o : &'a Player) -> JsonValue {
         object!{
-            "id" => o.id,
+            "uuid" => o.uuid,
             "pos" => &MyV2(o.pos),
             "vel" => &MyV2(o.vel),
             "scale" => o.scale,

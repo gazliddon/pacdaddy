@@ -6,30 +6,30 @@ use std::sync::mpsc::{Sender};
 
 pub struct Connection {
     tx_to_game_state : Sender<Message>,
-    id : u64,
+    connection_id : u64,
 }
 
 impl Connection {
-    pub fn new(id : u64, tx: Sender<Message> ) -> Self {
-        Self { tx_to_game_state: tx, id }
+    pub fn new(connection_id : u64, tx: Sender<Message> ) -> Self {
+        Self { tx_to_game_state: tx, connection_id }
     }
 
     fn handle_message(&mut self, msg: ws::Message ) -> Result<(), errors::Errors> {
         use jsonparse::{to_v2};
 
-        use messages::{Payload, Message, PlayerUpdateInfo};
+        use messages::{Payload, Message, PlayerUpdateInfo, HelloInfo};
 
         let msg_string = msg.to_string();
 
         let hdr = MsgHdr::from_str(&msg_string)?;
-        let client_id = hdr.get_client_id();
         let client_time = hdr.get_time();
 
         let payload  = match hdr.get_type() {
 
             "hello" => {
-                let name = hdr.data["name"].to_string();
-                Payload::Hello(name)
+                Payload::Hello(HelloInfo{
+                    name : hdr.data["name"].to_string()
+                })
             }
 
             "pong" => {
@@ -49,7 +49,7 @@ impl Connection {
             }
         };
 
-        let message = Message::new(payload, client_id, client_time);
+        let message = Message::new(payload, self.connection_id, client_time);
         self.tx_to_game_state.send(message).unwrap();
         Ok(())
     }

@@ -3,7 +3,8 @@ use messages;
 
 #[derive(Clone)]
 pub struct Player {
-    pub id : u64,
+    pub uuid : u64,
+    pub session_id: u64,
     pub pos : V2,
     pub vel : V2,
     frame: u64,
@@ -14,12 +15,12 @@ pub struct Player {
 }
 
 impl Player {
-    pub fn new(id : u64, time: u64, name : &str, pos: V2) -> Self {
+    pub fn new(session_id : u64, uuid : u64, time: u64, name : &str, pos: V2) -> Self {
         let name = name.to_string();
         let last_update = time; 
 
         Self {
-            id, last_update, name, pos,
+            uuid, last_update, name, pos, session_id,
             scale : 1.0,
             vel: V2::new(0.0, 0.0),
             score: 0,
@@ -56,7 +57,7 @@ impl Player {
 impl<'a> From<&'a Player> for messages::PlayerInfo {
     fn from(p : &'a Player) -> messages::PlayerInfo {
         messages::PlayerInfo {
-            id : p.id,
+            uuid : p.uuid,
             pos: p.pos.clone(),
             frame: 0,
             score: p.score,
