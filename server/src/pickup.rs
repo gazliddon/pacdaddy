@@ -1,4 +1,5 @@
 use v2::V2;
+use messages::{PickupInfo};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum PickupType {
@@ -18,5 +19,15 @@ pub struct Pickup {
 impl Pickup {
     pub fn new(pickup_type : PickupType, id : u64, pos : V2, time : u64) -> Self {
         Self { pickup_type, id, pos, time }
+    }
+}
+
+impl<'a> From<&'a Pickup> for PickupInfo {
+    fn from(pickup : &'a Pickup) -> PickupInfo {
+        PickupInfo {
+            id : pickup.id,
+            pos : pickup.pos.clone(),
+            kind: format!("{:?}", &pickup.pickup_type)
+        }
     }
 }

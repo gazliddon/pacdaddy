@@ -1,54 +1,83 @@
-
-
-// pub trait Handler {
-//     fn on_shutdown(&mut self) { ... }
-//     fn on_open(&mut self, shake: Handshake) -> Result<()> { ... }
-//     fn on_message(&mut self, msg: Message) -> Result<()> { ... }
-//     fn on_close(&mut self, code: CloseCode, reason: &str) { ... }
-//     fn on_error(&mut self, err: Error) { ... }
-//     fn on_request(&mut self, req: &Request) -> Result<Response> { ... }
-//     fn on_response(&mut self, res: &Response) -> Result<()> { ... }
-//     fn on_timeout(&mut self, event: Token) -> Result<()> { ... }
-//     fn on_new_timeout(&mut self, _: Token, _: Timeout) -> Result<()> { ... }
-//     fn on_frame(&mut self, frame: Frame) -> Result<Option<Frame>> { ... }
-//     fn on_send_frame(&mut self, frame: Frame) -> Result<Option<Frame>> { ... }
-//     fn build_request(&mut self, url: &Url) -> Result<Request> { ... }
-//     fn upgrade_ssl_client(
-//         &mut self, 
-//         stream: TcpStream, 
-//         url: &Url
-//     ) -> Result<SslStream<TcpStream>> { ... }
-//     fn upgrade_ssl_server(
-//         &mut self, 
-//         _: TcpStream
-//     ) -> Result<SslStream<TcpStream>> { ... }
-// }
-
-use std::sync::{ Arc, Mutex };
 use gamestate::{GameState};
 use std::collections::HashMap;
 use connection::{Connection};
 use ws;
+use std::sync::mpsc::{channel, Sender};
+use messages::Message;
 
-pub struct Server {
-    state : Arc<Mutex<GameState>>,
-    connections : HashMap<u64, ws::Sender>,
+
+struct Connections {
+    connections: HashMap<u64, ws::Sender>,
+    next_connection_id : u64,
 }
 
+impl Connections {
+    pub fn new() -> Self {
+        Self {
+            connections: HashMap::new(),
+            next_connection_id: 1
+        }
+    }
+
+    fn add(&mut self, out : ws::Sender) -> u64 {
+        let id = self.next_connection_id;
+        self.next_connection_id = id + 1;
+        self.connections.insert(id,out);
+        id
+    }
+
+    fn remove(&mut self, id : u64) {
+        self.connections.remove(&id);
+    }
+
+    fn send(&mut self, id : u64, msg : String) -> ws::Result<()> {
+        if let Some(out) = self.connections.get(&id) {
+            out.send(msg)?;
+        };
+
+        Ok(())
+    }
+}
+
+pub struct Server {
+    tx_to_game_state: Sender<Message>,
+    game_state: GameState,
+    connections: Connections,
+}
+
+
 impl Server {
-    pub fn new(state : Arc<Mutex<GameState>>) -> Server {
-        let connections = HashMap::new();
-        Server { state, connections }
+    pub fn new() -> Server {
+
+        use std;
+
+        let (tx_to_server, rx) = channel();
+
+        let game_state = GameState::new(tx_to_server);
+        let tx_to_game_state = game_state.get_sender();
+
+        let server = Server { 
+            tx_to_game_state, game_state,
+            connections: Connections::new(),
+        };
+
+        let _t1 = std::thread::spawn(move || {
+            loop {
+                let _msg  = rx.recv().unwrap();
+                // dispatch here
+            }
+        });
+
+        server
     }
 }
 
 impl ws::Factory for Server {
     type Handler = Connection;
+
     fn client_connected(&mut self, out: ws::Sender) -> Connection {
-        let arc_state = Arc::clone(&self.state);
-        let con = Connection::new(arc_state);
-        let id = con.get_id();
-        self.connections.insert(id, out);
+        let id = self.connections.add(out);
+        let con = Connection::new(id, self.tx_to_game_state.clone());
         con
     }
 
@@ -57,21 +86,15 @@ impl ws::Factory for Server {
     }
 }
 
-pub fn listen(host : &str, port : u32, state : &Arc<Mutex<GameState>> ) -> ws::Result<ws::WebSocket<Server>> {
-    use std::net::{ToSocketAddrs};
-
-    let state = Arc::clone(state);
-    let server = Server::new(state);
+pub fn listen(host : &str, port : u32 ) -> ws::Result<ws::WebSocket<Server>> {
+    let server = Server::new();
 
     info!("Starting a simpleserver on port {}", port);
 
     let con_str = format!("{}:{}", host, port);
+    let ws = ws::WebSocket::new(server)?.bind(con_str)?;
 
-    let mut addr = con_str.to_socket_addrs()?;
+    info!("Bound to {:?}", ws.local_addr());
 
-    let first_addr = addr.next().unwrap();
-    
-    let ws = ws::WebSocket::new(server)?;
-
-    ws::WebSocket::listen(ws,first_addr)
+    Ok(ws)
 }

@@ -1,152 +1,73 @@
-use json::JsonValue;
-use std::sync::{ Arc, Mutex };
-use gamestate::{GameState};
-use json;
-// use ws::{Sender};
+use msghdr::MsgHdr;
 use ws;
-// use networkobjs::{NetworkObjs};
-
-use v2::V2;
-
-struct RttStats {
-    max_samples: usize,
-    rtts : Vec<f64>,
-    pub average : f64,
-    pub max : f64,
-
-}
-
-impl RttStats {
-    pub fn new(max_samples: usize) -> Self {
-        Self {
-            max_samples,
-            rtts : vec![],
-            average: 0.0,
-            max : 0.0,
-        }
-    }
-
-    pub fn reset(&mut self) {
-        panic!("ksjakjskajs")
-    }
-
-    pub fn add_rtt(&mut self,  rtt : f64, _time : u64 ) {
-
-        self.rtts.push(rtt);
-            
-        if self.rtts.len() > self.max_samples {
-            self.rtts.resize(self.max_samples, 0.0)
-        }
-
-        let sum : f64 = self.rtts.iter().sum();
-        let avg = sum / self.rtts.len() as f64;
-        self.average = avg;
-    }
-}
-
-
+use errors;
+use messages::Message;
+use std::sync::mpsc::{Sender};
 
 pub struct Connection {
-    state : Arc<Mutex<GameState>>,
-    nw_id: u64,
-
-    rtt: Vec<f64>,
-    rtt_avg : f64,
-    rtt_peak: f64,
+    tx_to_game_state : Sender<Message>,
+    id : u64,
 }
-
 
 impl Connection {
-    pub fn new(state: Arc<Mutex<GameState>>) -> Self {
-        let nw_id  = {
-            let mut unlocked = state.lock().unwrap();
-            unlocked.get_nw_id()
+    pub fn new(id : u64, tx: Sender<Message> ) -> Self {
+        Self { tx_to_game_state: tx, id }
+    }
+
+    fn handle_message(&mut self, msg: ws::Message ) -> Result<(), errors::Errors> {
+        use jsonparse::{to_v2};
+
+        use messages::{Payload, Message, PlayerUpdateInfo};
+
+        let msg_string = msg.to_string();
+
+        let hdr = MsgHdr::from_str(&msg_string)?;
+        let client_id = hdr.get_client_id();
+        let client_time = hdr.get_time();
+
+        let payload  = match hdr.get_type() {
+
+            "hello" => {
+                let name = hdr.data["name"].to_string();
+                Payload::Hello(name)
+            }
+
+            "pong" => {
+                // TODO
+                Payload::Pong(0)
+            }
+
+            "playerInfo" => {
+                Payload::PlayerUpdate( PlayerUpdateInfo {
+                    pos : to_v2(&hdr.data, "pos")?,
+                    vel :  to_v2(&hdr.data, "vel")?,
+                } )
+            }
+
+            _ => {
+                Payload::Unknown(hdr.original)
+            }
         };
 
-        let mut rtt = vec![];
-        rtt.reserve(20);
-
-        Self { state, rtt, rtt_avg: 0.0, rtt_peak: 0.0, nw_id }
+        let message = Message::new(payload, client_id, client_time);
+        self.tx_to_game_state.send(message).unwrap();
+        Ok(())
     }
-
-    fn add_rtt(&mut self, new_rtt : f64) {
-        self.rtt.push(new_rtt);
-        if self.rtt.len() > 20 {
-            self.rtt.resize(20, 0.0)
-        }
-
-        let sum : f64 = self.rtt.iter().sum();
-        let avg = sum / self.rtt.len() as f64;
-        self.rtt_avg = avg;
-    }
-
-    pub fn get_id(&self ) -> u64 {
-        self.nw_id
-    }
-}
-
-
-fn get_v2_from_json(data : &JsonValue) -> Option<V2> {
-    let x = data["x"].as_f64()?;
-    let y = data["y"].as_f64()?;
-    Some(V2::new(x,y))
 }
 
 impl ws::Handler for Connection {
-
     fn on_open(&mut self, _shake: ws::Handshake) -> ws::Result<()> {
         // TODO get a player ID right here!!!
         Ok(())
     }
 
     fn on_message(&mut self, msg: ws::Message) -> ws::Result<()> {
-        let mut state = self.state.lock().unwrap();
-
-        let time = state.clock.now();
-
-        let parsed = json::parse(&msg.to_string()).unwrap();
-
-        let _msg_time = parsed["time"].as_u64().unwrap();
-
-        let msg_str = parsed["msg"].to_string();
-        let client_id = parsed["id"].as_u64().unwrap();
-        let data = &parsed["data"];
-
-        match msg_str.as_str() {
-
-            "hello" => {
-                let pos = V2::new(100.0,100.0);
-                let name = data["name"].to_string();
-                state.add_player(&name, &pos, time);
-            }
-
-            "pong" => {
-                // let ping_id = data["id"].as_u64().unwrap();
-                let send_time = data["time"].as_u64().unwrap();
-                let rtt_ns = state.clock.now() - send_time;
-                let rtt = ((rtt_ns / 1000) as f64) / 1000.0;
-                // self.add_rtt(rtt);
-                info!("{} : rtt millis {}", client_id,  rtt);
-            }
-
-            "player" => {
-                let pos = get_v2_from_json(&data["pos"]);
-                let vel = get_v2_from_json(&data["vel"]);
-
-                if pos.is_some() && vel.is_some() {
-
-                    state.update_player(client_id, &pos.unwrap(), &vel.unwrap(), time);
-                } else {
-                    warn!("Bad message {}", msg);
-                }
-            }
-
-            _ => {
-                println!("unhandlded msg {}", msg_str)
-            }
+        let res = self.handle_message(msg);
+        match res {
+            Err(errors::Errors::Sockets(ws)) => Err(ws),
+            Ok(()) => Ok(()),
+            _ => {panic!("unhandled error TODO")}
         }
-
-        Ok(())
     }
 }
 

@@ -1,4 +1,5 @@
 use v2::{V2};
+use messages;
 
 #[derive(Clone)]
 pub struct Player {
@@ -8,7 +9,7 @@ pub struct Player {
     frame: u64,
     last_update: u64,
     pub scale : f64,
-    pub score : u32,
+    pub score : u64,
     pub name : String,
 }
 
@@ -41,16 +42,31 @@ impl Player {
         self.scale = self.scale + 0.05;
     }
 
-    pub fn add_points(&mut self, points : u32) {
+    pub fn add_points(&mut self, points : u64) {
         self.score = self.score + points
     }
 
-    pub fn update(&mut self, time : u64, pos: &V2, vel : &V2) {
-        self.pos = pos.clone();
-        self.vel = vel.clone();
+    pub fn update(&mut self, time : u64, pos: V2, vel : V2) {
+        self.pos = pos;
+        self.vel = vel;
         self.last_update = time;
     }
 }
+
+impl<'a> From<&'a Player> for messages::PlayerInfo {
+    fn from(p : &'a Player) -> messages::PlayerInfo {
+        messages::PlayerInfo {
+            id : p.id,
+            pos: p.pos.clone(),
+            frame: 0,
+            score: p.score,
+            scale: p.scale,
+            name: p.name.clone(),
+        }
+    }
+}
+
+
 
 
 

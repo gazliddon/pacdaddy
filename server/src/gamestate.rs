@@ -5,10 +5,10 @@ use pickup::{Pickup, PickupType};
 use clock;
 use v2::{V2};
 
-use msgbatch::{MsgBatch};
+use messages::{Message, Payload};
+
 use player::{Player};
-use json;
-use std::sync::{ Arc, Mutex };
+use std::sync::mpsc::{Receiver,channel, Sender};
 
 fn mk_random_vec() -> V2 {
     use rand::distributions::{IndependentSample, Range};
@@ -36,23 +36,77 @@ fn mk_random_pickup(time : u64) -> Pickup {
 
 ////////////////////////////////////////////////////////////////////////////////
 
+// use connectable::Connectable;
+
+// impl Connectable<Message> for GameState {
+//     fn connect(&mut self, tx : Sender<Message> ) -> Sender<Message> {
+//         panic!("kjskjsa")
+//     }
+// }
+
+
+////////////////////////////////////////////////////////////////////////////////
 pub struct GameState {
-    pub players: HashMap<u64, Player>,
-    new_next_id : u64,
     pub clock: clock::Clock,
+    pub players: HashMap<u64, Player>,
     pub pickups : HashMap<u64, Pickup>,
-    msg_batch : MsgBatch,
+    new_next_id : u64,
+    time: u64,
+
+    tx_to_server: Sender<Message>,
+    rx_from_server: Receiver<Message>,
+    tx_to_me: Sender<Message>,
 }
 
 impl GameState {
+    
+    pub fn new(tx_to_server: Sender<Message>) -> Self {
+        let (tx_to_me, rx_from_server) = channel();
+        let mut ret = Self {
+            players: HashMap::new(),
+            pickups: HashMap::new(),
+            new_next_id : 0,
+            clock: clock::Clock::new(),
+            time: 0,
+            tx_to_server, rx_from_server, tx_to_me,
+        };
 
-    pub fn broadcast(&mut self, msg : &str, jdata :  JsonValue) {
-        self.msg_batch.broadcast(msg, jdata)
+        let time = ret.clock.now();
+        ret.time = time;
+
+        for _ in 0..100 {
+            ret.add_random_pickup();
+        }
+        ret
     }
 
-    pub fn send(&mut self, player_id : u64, msg : &str, jdata :  JsonValue) {
-        use msgbatch::Destination::*;
-        self.msg_batch.send(Connection(player_id), msg, jdata)
+    pub fn handle_message(&mut self, msg : Message) {
+        use messages::Payload::*;
+
+        match msg.data {
+            Nothing => "nothing",
+            Unknown(_) => "uknown",
+            Hello(_) => "hello",
+            PlayerInfo(_) => "playerInfo",
+            State(_) => "state",
+            Delete(_) => "delete",
+            Ping => "ping",
+            Pong(_) => "pong",
+            PickupInfo(_) => "pickupInfo",
+            PlayerUpdate(_) => "palyerUpdate",
+        };
+    }
+
+    pub fn get_sender(&self) -> Sender<Message> {
+        self.tx_to_me.clone()
+    }
+
+    pub fn broadcast(&mut self, data : Payload) {
+        self.send(0, data)
+    }
+
+    pub fn send(&mut self, id : u64, data : Payload ) {
+        let _message = Message::new(data, id, 0);
     }
 
     pub fn get_nw_id(&mut self) -> u64 {
@@ -61,8 +115,8 @@ impl GameState {
         ret
     }
 
-    pub fn add_random_pickup(&mut self, time : u64) -> u64 {
-        let p = mk_random_pickup(time);
+    pub fn add_random_pickup(&mut self) -> u64 {
+        let p = mk_random_pickup(self.time);
         self.add_pickup(p)
     }
 
@@ -70,9 +124,8 @@ impl GameState {
         let mut pickup = pickup.clone();
         let id = self.get_nw_id();
         pickup.id = id;
-        let json = json::from(&pickup);
+        self.broadcast(Payload::PickupInfo((&pickup).into()));
         self.pickups.insert(id, pickup);
-        self.broadcast("newPickup",json);
         id
     }
 
@@ -84,64 +137,42 @@ impl GameState {
         }
 
         let _ = self.pickups.remove(&id);
-        self.broadcast("removePickup", object!{ "id" => id });
+        self.broadcast(Payload::Delete(id));
     }
 
-    pub fn add_player(&mut self, name: &str, pos : &V2, time : u64) -> u64 {
+    pub fn add_player(&mut self, name: String, pos : V2, time : u64) -> u64 {
         let id = self.get_nw_id();
-        let player = Player::new(id, time, name, *pos);
-        let pjson : JsonValue = json::from(&player);
+        let player = Player::new(id, time, &name, pos.clone());
+        self.broadcast(Payload::PlayerInfo((&player).into()));
         self.players.insert(id, player);
-
-        self.send(id, "hello", pjson);
-        let jstate : JsonValue = json::from(&*self);
-        self.broadcast("state", jstate);
         id
     }
 
     pub fn remove_player(&mut self, id : u64) {
         info!("deleting player {}", id);
         self.players.remove(&id).unwrap();
-        self.broadcast("removePlayer", object!{ "id" => id });
+        self.broadcast(Payload::Delete(id));
     }
 
-    pub fn get_player_json(&self, player_id : u64) -> Option<JsonValue> {
-        let player = self.players.get(&player_id)?;
-        Some(json::from(player))
-    }
 
     pub fn change_player(&mut self, id : u64, func : &Fn(&mut Player) ) {
         if let Some(p) = self.players.get_mut(&id) { 
             func(p);
         }
 
-        if let Some(pjson) = self.get_player_json(id) {
-            self.broadcast("changePlayer", pjson);
-        }
+        if let Some(_p) = self.players.get(&id) {
+            // TODO
+            // self.broadcast(Payload::PlayerInfo(p.into()));
+        } 
     }
 }
 
 impl GameState {
 
-    pub fn new() -> Self {
-        let mut ret = Self {
-            players: HashMap::new(),
-            new_next_id : 0,
-            clock: clock::Clock::new(),
-            pickups: HashMap::new(),
-            msg_batch : MsgBatch::new(),
-        };
 
-        let time = ret.clock.now();
+    fn prune_inactive_players(&mut self) {
+        let time = self.time;
 
-        for _ in 0..100 {
-            ret.add_random_pickup(time);
-        }
-
-        ret
-    }
-
-    fn prune_inactive_players(&mut self, time : u64) {
         let to_kill : Vec<u64> = self.players.iter().filter(|&(_,p)| {
             let since_last = p.since_last_update(time);
             since_last > 3.0
@@ -152,7 +183,7 @@ impl GameState {
         }
     }
 
-    fn collide_pickups(&mut self, _time : u64) {
+    fn collide_pickups(&mut self) {
 
         // TODO REVIEW this is very suspect
         let mut pickup_hit : Vec<(u64, u64)> = vec![];
@@ -168,6 +199,7 @@ impl GameState {
 
         for &(player_id, pickup_id) in pickup_hit.iter() {
             self.remove_pickup(pickup_id);
+
             self.change_player(player_id, &|player| {
                 player.increase_scale();
                 player.add_points(30);
@@ -176,30 +208,22 @@ impl GameState {
     }
 
     pub fn update(&mut self) -> Option<JsonValue> {
-        let time = self.clock.now();
+        self.time = self.clock.now();
 
-        self.prune_inactive_players(time);
-        self.collide_pickups(time);
+        self.prune_inactive_players();
+        self.collide_pickups();
 
         if self.pickups.len() < 100 {
-            self.add_random_pickup(time);
+            self.add_random_pickup();
         }
 
-        // TODO flush here
         None
     }
 
-    pub fn update_player(&mut self, id : u64, pos : &V2, vel: &V2, time: u64) {
-
+    pub fn update_player(&mut self, id : u64, pos : V2, vel: V2, time: u64) {
         self.change_player(id, &|p| {
             p.update(time, pos, vel);
         });
-
-        self.collide_pickups(time);
-        // TODO flush here
     }
 }
 
-pub fn make_gamestate() -> Arc<Mutex<GameState>> {
-    Arc::new(Mutex::new(GameState::new()))
-}
