@@ -1,11 +1,9 @@
 use ws;
 
 use gamestate::{GameState};
-use connection::{Connection};
+use network::{Connection, Connections};
 use std::sync::mpsc::{channel, Sender};
 use messages::Message;
-
-use network::Connections;
 
 use std::sync::{Arc, Mutex};
 
@@ -60,6 +58,7 @@ impl ws::Factory for Server {
             let mut unlocked = self.connections.lock().unwrap();
             unlocked.add(out)
         };
+
         Connection::new(id, self.tx_to_game_state.clone())
     }
 

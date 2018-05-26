@@ -1,49 +1,14 @@
 use std::collections::HashMap;
 use json::JsonValue;
-use rand;
-use pickup::{Pickup, PickupType};
 use clock;
+use errors::Errors;
 use v2::{V2};
 
+use gamestate::utils::{mk_random_pickup};
 use messages::{Message, Payload};
-
 use player::{Player};
 use std::sync::mpsc::{Receiver,channel, Sender};
-
-fn mk_random_vec() -> V2 {
-    use rand::distributions::{IndependentSample, Range};
-    let between = Range::new(0.0f64, 1000.0);
-    let mut rng = rand::thread_rng();
-    let x = between.ind_sample(&mut rng);
-    let y = between.ind_sample(&mut rng);
-    V2::new(x,y)
-}
-
-fn mk_random_pickup(time : u64) -> Pickup {
-    use rand::Rng;
-
-    let names = vec![
-        PickupType::Coke,
-        PickupType::Pizza,
-        PickupType::Burger,
-    ];
-
-    let obj_type = rand::thread_rng().choose(&names).unwrap();
-
-    Pickup::new(obj_type.clone(), 0, mk_random_vec(), time)
-}
-
-
-////////////////////////////////////////////////////////////////////////////////
-
-// use connectable::Connectable;
-
-// impl Connectable<Message> for GameState {
-//     fn connect(&mut self, tx : Sender<Message> ) -> Sender<Message> {
-//         panic!("kjskjsa")
-//     }
-// }
-
+use pickup::{Pickup};
 
 ////////////////////////////////////////////////////////////////////////////////
 pub struct GameState {
@@ -59,7 +24,6 @@ pub struct GameState {
 }
 
 impl GameState {
-    
     pub fn new(tx_to_server: Sender<Message>) -> Self {
         let (tx_to_me, rx_from_server) = channel();
         let mut ret = Self {
@@ -140,41 +104,62 @@ impl GameState {
         } 
     }
 }
-
 // Message sending / receiving
 impl GameState {
 
-    fn get_next_msg(&self) -> Option<Message> {
-        panic!();
+    fn get_next_msg(&self) -> Result<Message, Errors> {
+        // use std::sync::mpsc::TryRecvError;
+        let msg = self.rx_from_server.try_recv()?;
+        Ok(msg)
     }
 
-    fn handle_message(&mut self, msg : Message) {
+    fn dispatch_message(&mut self, msg : Message) -> Result<(), Errors> {
         use messages::Payload::*;
+
         match msg.data {
             Hello(_hello_payload) => {
+                Ok(())
             }
 
-            Nothing => {},
-            Unknown(_) => {},
-            PlayerInfo(_) => {},
-            State(_) => {},
-            Delete(_) => {},
-            Ping => {},
-            Pong(_) => {},
-            PickupInfo(_) => {},
-            PlayerUpdate(_) => {},
-        };
-    }
+            PlayerInfo(_player_info) => {
+                Ok(())
 
-    pub fn process_messages(&mut self) {
-        loop {
-            if let Some(m) = self.get_next_msg() {
-                self.handle_message(m)
-            } else {
-                break;
+            },
+
+            Pong(_pongfo) => {
+                Ok(())
+            },
+
+            _ => {
+                Err(Errors::UnhandledMessage)
             }
         }
     }
+
+    pub fn process_messages(&mut self) -> Result<usize, Errors> {
+        let mut msgs_handled = 0;
+
+        loop {
+            let msg = self.get_next_msg();
+
+            match msg {
+                Err(Errors::ChannelEmpty) => break,
+
+                Ok(m) => {
+                    self.dispatch_message(m)?;
+                    msgs_handled = msgs_handled + 1;
+                }
+
+                Err(e) => {
+                    return Err(e);
+                }
+
+            }
+        }
+
+        Ok(msgs_handled)
+    }
+
 
     pub fn get_sender(&self) -> Sender<Message> {
         self.tx_to_me.clone()
@@ -187,7 +172,6 @@ impl GameState {
     fn send(&self, id : u64, data : Payload ) {
         let _message = Message::new(data, id, 0);
     }
-
 }
 
 impl GameState {

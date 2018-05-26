@@ -13,6 +13,21 @@ pub enum Payload {
     PlayerUpdate(PlayerUpdateInfo),
 }
 
+pub enum AllowedUsage {
+    FromServerOnly,
+    FromClientOnly,
+}
+
+pub struct MetaData {
+    id : &'static str,
+    allowed_usage: AllowedUsage,
+}
+
+pub struct PayloadStruct {
+    data: Payload,
+    meta_data: &'static MetaData,
+}
+
 impl Payload {
     pub fn get_name(&self) -> &'static str {
         match *self {
@@ -35,7 +50,6 @@ pub struct Message {
     pub time: u64,
     pub id: u64,
     pub data: Payload,
-
 }
 
 impl Message {
@@ -45,6 +59,4 @@ impl Message {
             id, time, msg, data
         }
     }
-
 }
-
