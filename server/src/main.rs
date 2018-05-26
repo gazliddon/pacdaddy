@@ -20,11 +20,9 @@ mod v2;
 mod opts;
 mod errors;
 mod rtt;
-mod coms;
 
 mod messages;
 mod network;
-mod connectable;
 
 ////////////////////////////////////////////////////////////////////////////////
 
