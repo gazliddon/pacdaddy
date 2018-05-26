@@ -9,12 +9,10 @@ extern crate cgmath;
 extern crate rand;
 extern crate url;
 
-mod pickup;
 mod clock;
 mod gamestate;
 mod server;
 mod utils;
-mod player;
 mod serial;
 mod v2;
 mod opts;

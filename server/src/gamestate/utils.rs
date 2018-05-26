@@ -1,6 +1,6 @@
 use rand;
 use v2::{V2};
-use pickup::{Pickup, PickupType};
+use gamestate::{Pickup, PickupType};
 
 pub fn mk_random_vec() -> V2 {
     use rand::distributions::{IndependentSample, Range};

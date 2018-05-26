@@ -2,8 +2,7 @@ use json::{JsonValue};
 use v2::V2;
 
 pub struct MyV2(pub V2);
-
-use pickup::{ Pickup, PickupType};
+use gamestate::{GameState, Player, Pickup, PickupType};
 
 impl<'a> From<&'a PickupType> for JsonValue {
     fn from(v : &'a PickupType) -> JsonValue {
@@ -31,7 +30,6 @@ impl<'a> From<&'a Pickup> for JsonValue {
     }
 }
 
-use player::Player;
 
 impl<'a> From<&'a Player> for JsonValue {
     fn from(o : &'a Player) -> JsonValue {
@@ -45,9 +43,6 @@ impl<'a> From<&'a Player> for JsonValue {
         }
     }
 }
-
-
-use gamestate::GameState;
 
 impl<'a > From<&'a GameState> for JsonValue {
     fn from(o : &'a GameState) -> JsonValue {

@@ -4,9 +4,8 @@ use v2::{V2};
 
 use gamestate::utils::{mk_random_pickup};
 use messages::{Message, Payload};
-use player::{Player};
+use gamestate::{Player, Pickup};
 use std::sync::mpsc::{Receiver,channel, Sender};
-use pickup::{Pickup};
 // use gamestate::messages::*;
 
 ////////////////////////////////////////////////////////////////////////////////
