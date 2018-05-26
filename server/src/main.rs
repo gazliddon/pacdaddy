@@ -15,19 +15,17 @@ mod gamestate;
 mod server;
 mod connection;
 mod utils;
-mod msgbatch;
 mod player;
 mod serial;
 mod v2;
 mod opts;
-mod msghdr;
 mod jsonparse;
 mod errors;
 mod rtt;
 mod coms;
 
 mod messages;
-
+mod network;
 mod connectable;
 
 ////////////////////////////////////////////////////////////////////////////////

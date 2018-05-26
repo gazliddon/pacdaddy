@@ -1,50 +1,19 @@
-use gamestate::{GameState};
-use std::collections::HashMap;
-use connection::{Connection};
 use ws;
+
+use gamestate::{GameState};
+use connection::{Connection};
 use std::sync::mpsc::{channel, Sender};
 use messages::Message;
 
+use network::Connections;
 
-struct Connections {
-    connections: HashMap<u64, ws::Sender>,
-    next_connection_id : u64,
-}
-
-impl Connections {
-    pub fn new() -> Self {
-        Self {
-            connections: HashMap::new(),
-            next_connection_id: 1
-        }
-    }
-
-    fn add(&mut self, out : ws::Sender) -> u64 {
-        let id = self.next_connection_id;
-        self.next_connection_id = id + 1;
-        self.connections.insert(id,out);
-        id
-    }
-
-    fn remove(&mut self, id : u64) {
-        self.connections.remove(&id);
-    }
-
-    fn send(&mut self, id : u64, msg : String) -> ws::Result<()> {
-        if let Some(out) = self.connections.get(&id) {
-            out.send(msg)?;
-        };
-
-        Ok(())
-    }
-}
+use std::sync::{Arc, Mutex};
 
 pub struct Server {
     tx_to_game_state: Sender<Message>,
     game_state: GameState,
-    connections: Connections,
+    connections: Arc<Mutex<Connections>>,
 }
-
 
 impl Server {
     pub fn new() -> Server {
@@ -56,15 +25,26 @@ impl Server {
         let game_state = GameState::new(tx_to_server);
         let tx_to_game_state = game_state.get_sender();
 
+
+        let connections = Arc::new(Mutex::new(Connections::new()));
+
         let server = Server { 
-            tx_to_game_state, game_state,
-            connections: Connections::new(),
+            tx_to_game_state, game_state, 
+            connections : Arc::clone(&connections),
         };
 
         let _t1 = std::thread::spawn(move || {
             loop {
-                let _msg  = rx.recv().unwrap();
-                // dispatch here
+                let msg  = rx.recv().unwrap();
+
+                if msg.id == 0 {
+                    // broadcast
+                } else {
+
+                    let mut unlocked = connections.lock().unwrap();
+                    let _res = unlocked.send(msg.id, "jksakjska".to_string());
+                    // handle error!
+                }
             }
         });
 
@@ -76,9 +56,11 @@ impl ws::Factory for Server {
     type Handler = Connection;
 
     fn client_connected(&mut self, out: ws::Sender) -> Connection {
-        let id = self.connections.add(out);
-        let con = Connection::new(id, self.tx_to_game_state.clone());
-        con
+        let id = {
+            let mut unlocked = self.connections.lock().unwrap();
+            unlocked.add(out)
+        };
+        Connection::new(id, self.tx_to_game_state.clone())
     }
 
     fn connection_made(&mut self, _ws: ws::Sender) -> Connection {

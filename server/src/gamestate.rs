@@ -80,36 +80,6 @@ impl GameState {
         ret
     }
 
-    pub fn handle_message(&mut self, msg : Message) {
-        use messages::Payload::*;
-
-        match msg.data {
-            Hello(_hello_payload) => {
-            }
-
-            Nothing => {},
-            Unknown(_) => {},
-            PlayerInfo(_) => {},
-            State(_) => {},
-            Delete(_) => {},
-            Ping => {},
-            Pong(_) => {},
-            PickupInfo(_) => {},
-            PlayerUpdate(_) => {},
-        };
-    }
-
-    pub fn get_sender(&self) -> Sender<Message> {
-        self.tx_to_me.clone()
-    }
-
-    pub fn broadcast(&mut self, data : Payload) {
-        self.send(0, data)
-    }
-
-    pub fn send(&mut self, id : u64, data : Payload ) {
-        let _message = Message::new(data, id, 0);
-    }
 
     pub fn get_uuid(&mut self) -> u64 {
         let ret = self.new_next_id;
@@ -165,16 +135,62 @@ impl GameState {
             func(p);
         }
 
-        if let Some(_p) = self.players.get(&id) {
-            // TODO
-            // self.broadcast(Payload::PlayerInfo(p.into()));
+        if let Some(p) = self.players.get(&id) {
+            self.broadcast(Payload::PlayerInfo(p.into()));
         } 
     }
 }
 
+// Message sending / receiving
 impl GameState {
 
+    fn get_next_msg(&self) -> Option<Message> {
+        panic!();
+    }
 
+    fn handle_message(&mut self, msg : Message) {
+        use messages::Payload::*;
+        match msg.data {
+            Hello(_hello_payload) => {
+            }
+
+            Nothing => {},
+            Unknown(_) => {},
+            PlayerInfo(_) => {},
+            State(_) => {},
+            Delete(_) => {},
+            Ping => {},
+            Pong(_) => {},
+            PickupInfo(_) => {},
+            PlayerUpdate(_) => {},
+        };
+    }
+
+    pub fn process_messages(&mut self) {
+        loop {
+            if let Some(m) = self.get_next_msg() {
+                self.handle_message(m)
+            } else {
+                break;
+            }
+        }
+    }
+
+    pub fn get_sender(&self) -> Sender<Message> {
+        self.tx_to_me.clone()
+    }
+
+    fn broadcast(&self, data : Payload) {
+        self.send(0, data)
+    }
+
+    fn send(&self, id : u64, data : Payload ) {
+        let _message = Message::new(data, id, 0);
+    }
+
+}
+
+impl GameState {
     fn prune_inactive_players(&mut self) {
         let time = self.time;
 
@@ -189,7 +205,6 @@ impl GameState {
     }
 
     fn collide_pickups(&mut self) {
-
         // TODO REVIEW this is very suspect
         let mut pickup_hit : Vec<(u64, u64)> = vec![];
 

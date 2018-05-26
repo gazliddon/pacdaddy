@@ -1,7 +1,6 @@
-use msghdr::MsgHdr;
+use messages::{MsgHdr, Message};
 use ws;
 use errors;
-use messages::Message;
 use std::sync::mpsc::{Sender};
 
 pub struct Connection {
