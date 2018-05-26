@@ -12,7 +12,6 @@ extern crate url;
 mod clock;
 mod gamestate;
 mod server;
-mod utils;
 mod serial;
 mod v2;
 mod opts;
