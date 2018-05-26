@@ -1,7 +1,5 @@
 use std::collections::HashMap;
-use json::JsonValue;
 use clock;
-use errors::Errors;
 use v2::{V2};
 
 use gamestate::utils::{mk_random_pickup};
@@ -9,18 +7,19 @@ use messages::{Message, Payload};
 use player::{Player};
 use std::sync::mpsc::{Receiver,channel, Sender};
 use pickup::{Pickup};
+// use gamestate::messages::*;
 
 ////////////////////////////////////////////////////////////////////////////////
 pub struct GameState {
     pub clock: clock::Clock,
     pub players: HashMap<u64, Player>,
     pub pickups : HashMap<u64, Pickup>,
-    new_next_id : u64,
-    time: u64,
+    pub new_next_id : u64,
+    pub time: u64,
 
-    tx_to_server: Sender<Message>,
-    rx_from_server: Receiver<Message>,
-    tx_to_me: Sender<Message>,
+    pub tx_to_server: Sender<Message>,
+    pub rx_from_server: Receiver<Message>,
+    pub tx_to_me: Sender<Message>,
 }
 
 impl GameState {
@@ -104,77 +103,10 @@ impl GameState {
         } 
     }
 }
-// Message sending / receiving
+
+
 impl GameState {
 
-    fn get_next_msg(&self) -> Result<Message, Errors> {
-        // use std::sync::mpsc::TryRecvError;
-        let msg = self.rx_from_server.try_recv()?;
-        Ok(msg)
-    }
-
-    fn dispatch_message(&mut self, msg : Message) -> Result<(), Errors> {
-        use messages::Payload::*;
-
-        match msg.data {
-            Hello(_hello_payload) => {
-                Ok(())
-            }
-
-            PlayerInfo(_player_info) => {
-                Ok(())
-
-            },
-
-            Pong(_pongfo) => {
-                Ok(())
-            },
-
-            _ => {
-                Err(Errors::UnhandledMessage)
-            }
-        }
-    }
-
-    pub fn process_messages(&mut self) -> Result<usize, Errors> {
-        let mut msgs_handled = 0;
-
-        loop {
-            let msg = self.get_next_msg();
-
-            match msg {
-                Err(Errors::ChannelEmpty) => break,
-
-                Ok(m) => {
-                    self.dispatch_message(m)?;
-                    msgs_handled = msgs_handled + 1;
-                }
-
-                Err(e) => {
-                    return Err(e);
-                }
-
-            }
-        }
-
-        Ok(msgs_handled)
-    }
-
-
-    pub fn get_sender(&self) -> Sender<Message> {
-        self.tx_to_me.clone()
-    }
-
-    fn broadcast(&self, data : Payload) {
-        self.send(0, data)
-    }
-
-    fn send(&self, id : u64, data : Payload ) {
-        let _message = Message::new(data, id, 0);
-    }
-}
-
-impl GameState {
     fn prune_inactive_players(&mut self) {
         let time = self.time;
 
@@ -211,7 +143,14 @@ impl GameState {
         }
     }
 
-    pub fn update(&mut self) -> Option<JsonValue> {
+
+    pub fn update_player(&mut self, id : u64, pos : V2, vel: V2, time: u64) {
+        self.change_player(id, &|p| {
+            p.update(time, pos, vel);
+        });
+    }
+
+    pub fn update(&mut self) {
         self.time = self.clock.now();
 
         self.prune_inactive_players();
@@ -220,14 +159,6 @@ impl GameState {
         if self.pickups.len() < 100 {
             self.add_random_pickup();
         }
-
-        None
-    }
-
-    pub fn update_player(&mut self, id : u64, pos : V2, vel: V2, time: u64) {
-        self.change_player(id, &|p| {
-            p.update(time, pos, vel);
-        });
     }
 }
 
