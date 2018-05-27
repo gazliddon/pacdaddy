@@ -2,6 +2,7 @@ use ws;
 use json;
 use std::sync::mpsc::TryRecvError;
 
+#[derive(Debug)]
 pub enum Errors {
     Json(json::JsonError),
     Missing(String),
@@ -9,9 +10,8 @@ pub enum Errors {
     Sockets(ws::Error),
     ChannelEmpty,
     ChannelDisconnected,
-    UnhandledMessage,
+    UnhandledMessage(String),
 }
-
 
 impl From<json::Error> for Errors {
     fn from(e : json::JsonError) -> Errors {

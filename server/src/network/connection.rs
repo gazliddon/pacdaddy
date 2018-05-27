@@ -15,6 +15,7 @@ impl Connection {
 
     fn handle_message(&mut self, msg: ws::Message ) -> Result<(), errors::Errors> {
         let msg_string = msg.to_string();
+        info!("message received {}", msg_string);
         let message = Message::from_str(&msg_string)?;
         self.tx_to_game_state.send(message).unwrap();
         Ok(())
@@ -22,13 +23,10 @@ impl Connection {
 }
 
 impl ws::Handler for Connection {
-    fn on_open(&mut self, _shake: ws::Handshake) -> ws::Result<()> {
-        // TODO get a player ID right here!!!
-        Ok(())
-    }
-
     fn on_message(&mut self, msg: ws::Message) -> ws::Result<()> {
+
         let res = self.handle_message(msg);
+
         match res {
             Err(errors::Errors::Sockets(ws)) => Err(ws),
             Ok(()) => Ok(()),

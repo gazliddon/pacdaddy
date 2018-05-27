@@ -9,30 +9,42 @@ use std::sync::{Arc, Mutex};
 
 pub struct Server {
     tx_to_game_state: Sender<Message>,
-    game_state: GameState,
     connections: Arc<Mutex<Connections>>,
 }
 
 impl Server {
     pub fn new() -> Server {
 
-        use std;
+        use std::{thread, time};
 
         let (tx_to_server, rx) = channel();
 
-        let game_state = GameState::new(tx_to_server);
+        let mut game_state = GameState::new(tx_to_server);
         let tx_to_game_state = game_state.get_sender();
 
 
         let connections = Arc::new(Mutex::new(Connections::new()));
 
         let server = Server { 
-            tx_to_game_state, game_state, 
+            tx_to_game_state,
             connections : Arc::clone(&connections),
         };
 
-        let _t1 = std::thread::spawn(move || {
+        let sixty_hertz = time::Duration::from_millis(17);
+
+        let _t0 = thread::spawn(move || {
+
             loop {
+                game_state.update().unwrap();
+                
+                thread::sleep(sixty_hertz);
+            }
+        });
+
+        let _t1 = thread::spawn(move || {
+            loop {
+                // Does the server have anything to say?
+                // Should be done in _t0 really?
                 let msg  = rx.recv().unwrap();
 
                 if msg.id == 0 {
@@ -53,17 +65,14 @@ impl Server {
 impl ws::Factory for Server {
     type Handler = Connection;
 
-    fn client_connected(&mut self, out: ws::Sender) -> Connection {
+
+    fn connection_made(&mut self, out: ws::Sender) -> Connection {
         let id = {
             let mut unlocked = self.connections.lock().unwrap();
             unlocked.add(out)
         };
 
         Connection::new(id, self.tx_to_game_state.clone())
-    }
-
-    fn connection_made(&mut self, _ws: ws::Sender) -> Connection {
-        panic!("no tahanks!")
     }
 }
 

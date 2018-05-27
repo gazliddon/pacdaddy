@@ -17,20 +17,23 @@ impl GameState {
 
         match msg.data {
             Hello(_hello_payload) => {
+                info!("ignoring hello");
                 Ok(())
             }
 
             PlayerInfo(_player_info) => {
+                info!("ignoring player info");
                 Ok(())
 
             },
 
             Pong(_pongfo) => {
+                info!("ignoring pong info");
                 Ok(())
             },
 
             _ => {
-                Err(Errors::UnhandledMessage)
+                Err(Errors::UnhandledMessage(format!("{:?}", msg.data)))
             }
         }
     }

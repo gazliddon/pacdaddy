@@ -1,5 +1,6 @@
 use messages::payloads::*;
 
+#[derive(Debug)]
 pub enum Payload {
     Nothing,
     Unknown(String),
@@ -13,16 +14,19 @@ pub enum Payload {
     PlayerUpdate(PlayerUpdateInfo),
 }
 
+#[derive(Debug)]
 pub enum AllowedUsage {
     FromServerOnly,
     FromClientOnly,
 }
 
+#[derive(Debug)]
 pub struct MetaData {
     id : &'static str,
     allowed_usage: AllowedUsage,
 }
 
+#[derive(Debug)]
 pub struct PayloadStruct {
     data: Payload,
     meta_data: &'static MetaData,
@@ -45,6 +49,7 @@ impl Payload {
     }
 }
 
+#[derive(Debug)]
 pub struct Message {
     pub msg: String,
     pub time: u64,

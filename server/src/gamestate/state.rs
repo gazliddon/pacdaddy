@@ -2,6 +2,8 @@ use std::collections::HashMap;
 use clock;
 use v2::{V2};
 
+use errors::Errors;
+
 use gamestate::utils::{mk_random_pickup};
 use messages::{Message, Payload};
 use gamestate::{Player, Pickup};
@@ -142,15 +144,16 @@ impl GameState {
         }
     }
 
-
     pub fn update_player(&mut self, id : u64, pos : V2, vel: V2, time: u64) {
         self.change_player(id, &|p| {
             p.update(time, pos, vel);
         });
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self) -> Result<(), Errors> {
+
         self.time = self.clock.now();
+        let _messages_handled = self.process_messages()?;
 
         self.prune_inactive_players();
         self.collide_pickups();
@@ -158,6 +161,7 @@ impl GameState {
         if self.pickups.len() < 100 {
             self.add_random_pickup();
         }
+        Ok(())
     }
 }
 
