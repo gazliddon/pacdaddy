@@ -154,7 +154,7 @@ export default class extends Phaser.State {
 
   create () {
     let {game} = this
-    let {socket} = window.billboard
+    let {socket, id, name} = window.billboard
 
     let music = game.add.audio('main')
 
@@ -176,8 +176,11 @@ export default class extends Phaser.State {
     const gameState = new GameState(game)
 
     this.socket = socket
+    this.id = id
+    this.name = name
 
     socket.onMessage((res, incoming) => {
+      console.log(incoming.msg)
       gameState.dispatch(incoming.msg, res, incoming)
     })
 
@@ -185,7 +188,7 @@ export default class extends Phaser.State {
       this.exit()
     })
 
-    socket.sendNow({ msg: 'hello', time: 0, id: 0, data: {name: window.billboard.name} })
+    socket.sendNow({ msg: 'hello', time: 0, id: id, data: {name: name} })
 
     const updateCounter = () => {
       socket.flush()

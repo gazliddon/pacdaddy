@@ -2,6 +2,7 @@ use gamestate::state::GameState;
 use messages::{Message, Payload};
 use std::sync::mpsc::{ Sender};
 use errors::Errors;
+use v2::{V2};
 
 // Message sending / receiving
 impl GameState {
@@ -16,8 +17,10 @@ impl GameState {
         use messages::Payload::*;
 
         match msg.data {
-            Hello(_hello_payload) => {
-                info!("ignoring hello");
+
+            Hello(hello) => {
+                let pos = V2::new(100.0, 100.0);
+                self.add_player(msg.id, hello.name, pos, msg.time);
                 Ok(())
             }
 
@@ -71,6 +74,10 @@ impl GameState {
     }
 
     pub fn send(&self, id : u64, data : Payload ) {
-        let _message = Message::new(data, id, 0);
+        let message = Message::new(data, id, 0);
+        info!("About to send {:?}", message);
+        let res = self.tx_to_server.send(message);
+        info!("sent it! {:?}", res);
+        res.unwrap();
     }
 }

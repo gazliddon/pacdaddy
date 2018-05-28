@@ -36,6 +36,14 @@ impl Connections {
         Ok(())
     }
 
+    pub fn broadcast(&mut self, msg : String) -> ws::Result<()> {
+        for (_k, v) in &self.connections {
+            // TODO appropriate errror!
+            let _ = v.send(msg.clone());
+        }
+        Ok(())
+    }
+
     pub fn get<'a>(&'a self, _id: u64) -> Option<&'a ws::Sender> {
         panic!("sklajsa")
     }

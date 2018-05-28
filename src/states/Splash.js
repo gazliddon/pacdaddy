@@ -11,7 +11,8 @@ const table = {
   done: {changeName: 'clickMe'},
   retry: { connecting: 'retry', retry: 'retry' },
   connected: { connecting: 'fading', retry: 'fading' },
-  fadeComplete: { fading: 'startGame' }
+  fadeComplete: { fading: 'startGame' },
+  disconnect: {connecting: 'error'}
 }
 
 export default class extends Phaser.State {
@@ -64,13 +65,26 @@ export default class extends Phaser.State {
     this.sm.ev('done')
   }
 
+  onError () {
+    console.log('connection error')
+  }
+
   onConnecting () {
     const onRetry = (_, trys) => {
       this.sm.ev('retry', trys)
     }
 
     const onConnect = (socket) => {
-      this.sm.ev('connected', socket)
+      socket.onMessage((s, {id, time, msg}) => {
+        if (msg === 'madeConnection') {
+          let obj = {
+            socket, id, name: window.localStorage.name
+          }
+          this.sm.ev('connected', obj)
+        } else {
+          this.sm.ev('disconnect')
+        }
+      })
     }
 
     const onError = (err) => {
@@ -83,21 +97,23 @@ export default class extends Phaser.State {
       .catch(onError)
   }
 
+  onConnected () {
+  }
+
   onRetry (tries) {
   }
 
-  onFading (socket) {
+  onFading (obj) {
     this.music.fadeOut(1000)
     this.camera.fade('#000000')
     this.camera.onFadeComplete.add(() => {
-      this.sm.ev('fadeComplete', socket, window.localStorage.name)
+      this.sm.ev('fadeComplete', obj)
     }, this)
   }
 
-  onStartGame (socket, name) {
+  onStartGame (obj) {
+    window.billboard = obj
     this.music.stop()
-    window.billboard.socket = socket
-    window.billboard.name = window.localStorage.name
     this.state.start('Game')
   }
 

@@ -5,7 +5,7 @@ use v2::{V2};
 use errors::Errors;
 
 use gamestate::utils::{mk_random_pickup};
-use messages::{Message, Payload};
+use messages::{Message, Payload, DeleteInfo};
 use gamestate::{Player, Pickup};
 use std::sync::mpsc::{Receiver,channel, Sender};
 // use gamestate::messages::*;
@@ -24,8 +24,18 @@ pub struct GameState {
 }
 
 impl GameState {
+    fn create_world(&mut self) {
+        for _ in 0..100 {
+            let id = self.get_uuid();
+            let mut pickup = mk_random_pickup(self.time);
+            pickup.uuid = id;
+            self.pickups.insert(id, pickup);
+        }
+    }
+
     pub fn new(tx_to_server: Sender<Message>) -> Self {
         let (tx_to_me, rx_from_server) = channel();
+
         let mut ret = Self {
             players: HashMap::new(),
             pickups: HashMap::new(),
@@ -37,13 +47,9 @@ impl GameState {
 
         let time = ret.clock.now();
         ret.time = time;
-
-        for _ in 0..100 {
-            ret.add_random_pickup();
-        }
+        ret.create_world();
         ret
     }
-
 
     pub fn get_uuid(&mut self) -> u64 {
         let ret = self.new_next_id;
@@ -73,26 +79,20 @@ impl GameState {
         }
 
         let _ = self.pickups.remove(&id);
-        self.broadcast(Payload::Delete(id));
+        self.broadcast(Payload::Delete(DeleteInfo {to_delete : id}));
     }
 
-    pub fn add_session(&mut self, _connection_id : u64) {
-    }
-
-    pub fn add_player(&mut self, session_id : u64,  name : String, pos : V2, time : u64) -> u64 {
-        let uuid = self.get_uuid();
-        let player = Player::new(session_id, uuid, time, &name, pos.clone());
+    pub fn add_player(&mut self, id : u64,  name : String, pos : V2, time : u64) {
+        let player = Player::new(id, time, &name, pos.clone());
         self.broadcast(Payload::PlayerInfo((&player).into()));
-        self.players.insert(uuid, player);
-        uuid
+        self.players.insert(id, player);
     }
 
     pub fn remove_player(&mut self, id : u64) {
         info!("deleting player {}", id);
         self.players.remove(&id).unwrap();
-        self.broadcast(Payload::Delete(id));
+        self.broadcast(Payload::Delete(DeleteInfo{to_delete: id}));
     }
-
 
     pub fn change_player(&mut self, id : u64, func : &Fn(&mut Player) ) {
         if let Some(p) = self.players.get_mut(&id) { 

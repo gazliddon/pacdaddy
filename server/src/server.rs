@@ -1,4 +1,5 @@
 use ws;
+use json;
 
 use gamestate::{GameState};
 use network::{Connection, Connections};
@@ -23,54 +24,61 @@ impl Server {
         let tx_to_game_state = game_state.get_sender();
 
 
-        let connections = Arc::new(Mutex::new(Connections::new()));
-
-        let server = Server { 
-            tx_to_game_state,
-            connections : Arc::clone(&connections),
-        };
-
         let sixty_hertz = time::Duration::from_millis(17);
 
-        let _t0 = thread::spawn(move || {
 
+        thread::Builder::new().name("update".to_string()).spawn(move || {
             loop {
                 game_state.update().unwrap();
-                
                 thread::sleep(sixty_hertz);
             }
-        });
+        }).unwrap();
 
-        let _t1 = thread::spawn(move || {
+        let connections = Arc::new(Mutex::new(Connections::new()));
+        let thread_cons = Arc::clone(&connections);
+
+        thread::Builder::new().name("connection sink".to_string()).spawn(move || {
             loop {
                 // Does the server have anything to say?
                 // Should be done in _t0 really?
                 let msg  = rx.recv().unwrap();
+                info!("Sendning! {:?}", msg);
+
+                let mut unlocked = thread_cons.lock().unwrap();
+
+                let msg_str = json::from(&msg).to_string();
 
                 if msg.id == 0 {
-                    // broadcast
+                    // TODO handle error!
+                    let _res = unlocked.broadcast(msg_str);
                 } else {
-
-                    let mut unlocked = connections.lock().unwrap();
-                    let _res = unlocked.send(msg.id, "jksakjska".to_string());
-                    // handle error!
+                    // TODO handle error!
+                    let _res = unlocked.send(msg.id, msg_str);
                 }
             }
-        });
+        }).unwrap();
 
-        server
+        Server { 
+            tx_to_game_state,connections,
+        }
     }
 }
 
 impl ws::Factory for Server {
     type Handler = Connection;
 
-
     fn connection_made(&mut self, out: ws::Sender) -> Connection {
+
+        use messages::{Payload, Message};
+
         let id = {
             let mut unlocked = self.connections.lock().unwrap();
-            unlocked.add(out)
+            unlocked.add(out.clone())
         };
+
+        let msg = Message::new(Payload::MadeConnection, id, 0);
+        let jmsg : json::JsonValue = json::from(&msg);
+        out.send(jmsg.to_string()).unwrap();
 
         Connection::new(id, self.tx_to_game_state.clone())
     }
@@ -78,9 +86,6 @@ impl ws::Factory for Server {
 
 pub fn listen(host : &str, port : u32 ) -> ws::Result<ws::WebSocket<Server>> {
     let server = Server::new();
-
-    info!("Starting a simpleserver on port {}", port);
-
     let con_str = format!("{}:{}", host, port);
     let ws = ws::WebSocket::new(server)?.bind(con_str)?;
 

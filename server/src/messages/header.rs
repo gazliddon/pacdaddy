@@ -6,12 +6,14 @@ pub enum Payload {
     Unknown(String),
     Hello(HelloInfo),
     State(GameStateInfo),
-    Delete(u64),
+    Delete(DeleteInfo),
+    PlayerDelete(DeleteInfo),
     Ping,
-    Pong(u64),
+    Pong(PongInfo),
     PlayerInfo(PlayerInfo),
     PickupInfo(PickupInfo),
     PlayerUpdate(PlayerUpdateInfo),
+    MadeConnection,
 }
 
 #[derive(Debug)]
@@ -37,14 +39,18 @@ impl Payload {
         match *self {
             Payload::Nothing => "nothing",
             Payload::Unknown(_) => "uknown",
+
             Payload::Hello(_) => "hello",
+
             Payload::PlayerInfo(_) => "playerInfo",
             Payload::State(_) => "state",
             Payload::Delete(_) => "delete",
             Payload::Ping => "ping",
             Payload::Pong(_) => "pong",
             Payload::PickupInfo(_) => "pickupInfo",
-            Payload::PlayerUpdate(_) => "palyerUpdate",
+            Payload::PlayerUpdate(_) => "playerUpdate",
+            Payload::MadeConnection => "madeConnection",
+            Payload::PlayerDelete(_) => "playerDelete",
         }
     }
 }
