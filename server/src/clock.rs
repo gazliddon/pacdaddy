@@ -8,6 +8,10 @@ pub fn as_secs(n : u64) -> f64 {
     (n as f64 / 1000000000.0)
 }
 
+pub fn as_millis(n : u64) -> f64 {
+    (n as f64 / 1000000.0)
+}
+
 impl Clock {
     pub fn now(&self) -> u64 {
         let dur = SystemTime::now().duration_since(self.start_time).unwrap();

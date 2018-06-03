@@ -154,7 +154,11 @@ export default class extends Phaser.State {
 
   create () {
     let {game} = this
+
     let {socket, id, name} = window.billboard
+    this.socket = socket
+    this.id = id
+    this.name = name
 
     let music = game.add.audio('main')
 
@@ -173,11 +177,7 @@ export default class extends Phaser.State {
     this.makeBanner()
 
     const onScreenItems = new OnScreenItems(game)
-    const gameState = new GameState(game)
-
-    this.socket = socket
-    this.id = id
-    this.name = name
+    const gameState = new GameState(game, id)
 
     socket.onMessage((res, incoming) => {
       console.log(incoming.msg)

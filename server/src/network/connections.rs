@@ -27,7 +27,6 @@ impl Connections {
     }
 
     // TODO made this my error
-
     pub fn send(&mut self, id : u64, msg : String) -> ws::Result<()> {
         if let Some(out) = self.connections.get(&id) {
             out.send(msg)?;

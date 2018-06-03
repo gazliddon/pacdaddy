@@ -1,6 +1,6 @@
 use messages::payloads::*;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Payload {
     Nothing,
     Unknown(String),
@@ -13,22 +13,23 @@ pub enum Payload {
     PlayerInfo(PlayerInfo),
     PickupInfo(PickupInfo),
     PlayerUpdate(PlayerUpdateInfo),
+    PlayerJoined(PlayerJoinedInfo),
     MadeConnection,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum AllowedUsage {
     FromServerOnly,
     FromClientOnly,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MetaData {
     id : &'static str,
     allowed_usage: AllowedUsage,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PayloadStruct {
     data: Payload,
     meta_data: &'static MetaData,
@@ -51,11 +52,12 @@ impl Payload {
             Payload::PlayerUpdate(_) => "playerUpdate",
             Payload::MadeConnection => "madeConnection",
             Payload::PlayerDelete(_) => "playerDelete",
+            Payload::PlayerJoined(_) => "playerJoined",
         }
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Message {
     pub msg: String,
     pub time: u64,

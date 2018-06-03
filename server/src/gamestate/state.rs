@@ -83,7 +83,18 @@ impl GameState {
     }
 
     pub fn add_player(&mut self, id : u64,  name : String, pos : V2, time : u64) {
+
+        use messages::PlayerJoinedInfo;
+
+        let pjoined = PlayerJoinedInfo {
+            uuid: id,
+            pos: pos.clone()
+        };
+
+        self.send(id, Payload::PlayerJoined(pjoined));
+
         let player = Player::new(id, time, &name, pos.clone());
+
         self.broadcast(Payload::PlayerInfo((&player).into()));
         self.players.insert(id, player);
     }
@@ -153,6 +164,7 @@ impl GameState {
     pub fn update(&mut self) -> Result<(), Errors> {
 
         self.time = self.clock.now();
+
         let _messages_handled = self.process_messages()?;
 
         self.prune_inactive_players();

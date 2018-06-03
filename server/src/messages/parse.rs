@@ -43,28 +43,40 @@ fn to_v2(json : &JsonValue, key : &str) -> Result<v2::V2, Errors> {
 
 
 impl Payload {
-
     fn from_raw(msg_str : &str, j : &json::JsonValue) -> Result<Payload, Errors> {
-
-        use messages::{HelloInfo};
+        use messages::{
+            HelloInfo, 
+            PlayerUpdateInfo
+        };
 
         let as_string = msg_str.to_string();
-        let unknown = Ok(Payload::Unknown(as_string.clone()));
-        let unhandled = Ok(Payload::Unknown(as_string.clone()));
 
-        match msg_str {
+        let ret = match msg_str {
             "hello" => {
-                Ok(Payload::Hello( HelloInfo { name: j["name"].to_string()}))
+                Payload::Hello(
+                    HelloInfo {
+                        name: j["name"].to_string()
+                    })
             }
 
-            "nothing" | "raw" | "pong" | "playerInfo" => {
-                unknown
+            "playerUpdate" => {
+                Payload::PlayerUpdate(
+                    PlayerUpdateInfo {
+                        pos: to_v2(j,"pos")?,
+                        vel: to_v2(j,"vel")?,
+                    })
+            }
+
+            "nothing" | "raw" | "pong"  => {
+                Payload::Unknown(as_string.clone())
             }
 
             _ => {
-                unhandled
+                Payload::Unknown(as_string.clone())
             }
-        }
+        };
+
+        Ok(ret)
     }
 }
 

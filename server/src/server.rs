@@ -42,7 +42,6 @@ impl Server {
                 // Does the server have anything to say?
                 // Should be done in _t0 really?
                 let msg  = rx.recv().unwrap();
-                info!("Sendning! {:?}", msg);
 
                 let mut unlocked = thread_cons.lock().unwrap();
 
@@ -77,8 +76,7 @@ impl ws::Factory for Server {
         };
 
         let msg = Message::new(Payload::MadeConnection, id, 0);
-        let jmsg : json::JsonValue = json::from(&msg);
-        out.send(jmsg.to_string()).unwrap();
+        self.tx_to_game_state.send(msg).unwrap();
 
         Connection::new(id, self.tx_to_game_state.clone())
     }
@@ -88,8 +86,6 @@ pub fn listen(host : &str, port : u32 ) -> ws::Result<ws::WebSocket<Server>> {
     let server = Server::new();
     let con_str = format!("{}:{}", host, port);
     let ws = ws::WebSocket::new(server)?.bind(con_str)?;
-
     info!("Bound to {:?}", ws.local_addr());
-
     Ok(ws)
 }

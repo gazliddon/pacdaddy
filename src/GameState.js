@@ -4,28 +4,34 @@ import Dispatchable from './Dispatchable'
 import _ from 'lodash'
 
 export default class extends Dispatchable {
-  constructor (game) {
+  constructor (game, id) {
     super()
+    this.id = id
     this.game = game
     this.player = null
     this.players = {}
     this.objs = {}
-    this.id = -1
     this.time = -1
     this.group = game.add.group()
-
     this.sfx = game.add.audio('eat_dot')
-
+    // Debug
     window.gs = this
   }
 
   networkTime (time) {
   }
 
-  onJoined (res, {data, time}) {
-    let {game, group} = this
-    let {id, pos: {x, y}, name} = data
-    this.id = id
+  onPlayerInfo (res, {data, time}) {
+    let {id} = data
+    // is this another player
+    if (id !== this.id) {
+      // Todo create or update a proxy for this player
+    }
+  }
+
+  onPlayerJoined (res, {data, time}) {
+    let {game, group, id} = this
+    let {pos: {x, y}, name} = data
     this.time = time
     this.lastTime = performance.now()
     const pos = new P(x, y)
@@ -34,12 +40,8 @@ export default class extends Dispatchable {
   }
 
   mkMessage (msg, data) {
-    return {
-      msg,
-      data,
-      time: this.time,
-      id: this.id
-    }
+    let {id, time} = this
+    return { msg, id, time, data }
   }
 
   sendNow (res, msg, data) {
@@ -161,7 +163,7 @@ export default class extends Dispatchable {
         }
       }
 
-      this.sendNow(res, 'player', payLoad)
+      this.sendNow(res, 'playerUpdate', payLoad)
     } else {
       game.camera.follow()
     }

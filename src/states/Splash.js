@@ -3,6 +3,7 @@ import Phaser from 'phaser'
 import {makeSocketRetry} from '../Socket'
 import StateMachine from '../StateMachine'
 import _ from 'lodash'
+import Clock from '../Clock'
 
 const table = {
   start: { nothing: 'clickMe' },
@@ -77,9 +78,15 @@ export default class extends Phaser.State {
     const onConnect = (socket) => {
       socket.onMessage((s, {id, time, msg}) => {
         if (msg === 'madeConnection') {
+          let clock = new Clock(time)
+
           let obj = {
-            socket, id, name: window.localStorage.name
+            socket,
+            id,
+            clock,
+            name: window.localStorage.name
           }
+          console.log(obj)
           this.sm.ev('connected', obj)
         } else {
           this.sm.ev('disconnect')

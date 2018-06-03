@@ -8,7 +8,6 @@ use v2::{V2};
 impl GameState {
 
     fn get_next_msg(&self) -> Result<Message, Errors> {
-        // use std::sync::mpsc::TryRecvError;
         let msg = self.rx_from_server.try_recv()?;
         Ok(msg)
     }
@@ -17,6 +16,10 @@ impl GameState {
         use messages::Payload::*;
 
         match msg.data {
+            MadeConnection => {
+                self.send(msg.id, msg.data);
+                Ok(())
+            }
 
             Hello(hello) => {
                 let pos = V2::new(100.0, 100.0);
@@ -24,11 +27,14 @@ impl GameState {
                 Ok(())
             }
 
-            PlayerInfo(_player_info) => {
-                info!("ignoring player info");
+            PlayerUpdate(p_update) => {
+                self.update_player(
+                    msg.id,
+                    p_update.pos,
+                    p_update.vel,
+                    msg.time);
                 Ok(())
-
-            },
+            }
 
             Pong(_pongfo) => {
                 info!("ignoring pong info");
@@ -74,10 +80,9 @@ impl GameState {
     }
 
     pub fn send(&self, id : u64, data : Payload ) {
-        let message = Message::new(data, id, 0);
-        info!("About to send {:?}", message);
+        let message = Message::new(data, id, self.time);
+        // TODO propogate errors and handle
         let res = self.tx_to_server.send(message);
-        info!("sent it! {:?}", res);
         res.unwrap();
     }
 }

@@ -15,7 +15,6 @@ impl Connection {
 
     fn handle_message(&mut self, msg: ws::Message ) -> Result<(), errors::Errors> {
         let msg_string = msg.to_string();
-        info!("message received {}", msg_string);
         let message = Message::from_str(&msg_string)?;
         self.tx_to_game_state.send(message).unwrap();
         Ok(())
@@ -30,7 +29,7 @@ impl ws::Handler for Connection {
         match res {
             Err(errors::Errors::Sockets(ws)) => Err(ws),
             Ok(()) => Ok(()),
-            _ => {panic!("unhandled error TODO")}
+            _ => {panic!("unhandled error TODO {:?}", res)}
         }
     }
 }
