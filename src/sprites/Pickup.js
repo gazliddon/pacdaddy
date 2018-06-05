@@ -22,9 +22,9 @@ export default class extends Spr {
 
     this.pos = pos
 
-    this.animations.add('coke', [3 * 14 + 2], 10, true)
-    this.animations.add('pizza', [3 * 14 + 3], 10, true)
-    this.animations.add('burger', [3 * 14 + 4], 10, true)
+    this.animations.add('Coke', [3 * 14 + 2], 10, true)
+    this.animations.add('Pizza', [3 * 14 + 3], 10, true)
+    this.animations.add('Burger', [3 * 14 + 4], 10, true)
 
     this.setAnim(kind)
 

@@ -36,11 +36,11 @@ class OnScreenItems {
     })
   }
 
-  addSpr ({name, id: nwId, pos: {x, y}, kind}) {
+  addSpr ({name, uuid, pos: {x, y}, kind}) {
     const {game, group, asset} = this
     const pos = new P(x, y)
-    const myObj = new Pickup({ game, kind, group, pos, asset, nwId, name })
-    this.objs[nwId] = myObj
+    const myObj = new Pickup({ game, kind, group, pos, asset, uuid, name })
+    this.objs[uuid] = myObj
   }
 
   updateSpr (obj, {pos: {x, y}, kind}) {

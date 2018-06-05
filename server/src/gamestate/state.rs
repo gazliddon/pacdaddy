@@ -5,7 +5,7 @@ use v2::{V2};
 use errors::Errors;
 
 use gamestate::utils::{mk_random_pickup};
-use messages::{Message, Payload, DeleteInfo};
+use messages::{Message, Payload, DeleteInfo, PlayerUpdateInfo, HelloInfo};
 use gamestate::{Player, Pickup};
 use std::sync::mpsc::{Receiver,channel, Sender};
 // use gamestate::messages::*;
@@ -82,7 +82,9 @@ impl GameState {
         self.broadcast(Payload::Delete(DeleteInfo {to_delete : id}));
     }
 
-    pub fn add_player(&mut self, id : u64,  name : String, pos : V2, time : u64) {
+    pub fn add_player(&mut self, id : u64, client_time : u64, hello: HelloInfo) {
+
+        let pos = V2::new(100.0, 100.0);
 
         use messages::PlayerJoinedInfo;
 
@@ -93,7 +95,10 @@ impl GameState {
 
         self.send(id, Payload::PlayerJoined(pjoined));
 
-        let player = Player::new(id, time, &name, pos.clone());
+        let gsinfo = GameStateInfo::from(&*self);
+        self.send(id, Payload::State(gsinfo));
+
+        let player = Player::new(id, client_time, client_time, &hello.name, pos.clone());
 
         self.broadcast(Payload::PlayerInfo((&player).into()));
         self.players.insert(id, player);
@@ -102,7 +107,7 @@ impl GameState {
     pub fn remove_player(&mut self, id : u64) {
         info!("deleting player {}", id);
         self.players.remove(&id).unwrap();
-        self.broadcast(Payload::Delete(DeleteInfo{to_delete: id}));
+        self.broadcast(Payload::PlayerDelete(DeleteInfo{to_delete: id}));
     }
 
     pub fn change_player(&mut self, id : u64, func : &Fn(&mut Player) ) {
@@ -155,9 +160,11 @@ impl GameState {
         }
     }
 
-    pub fn update_player(&mut self, id : u64, pos : V2, vel: V2, time: u64) {
+    pub fn update_player(&mut self, id : u64, client_time : u64, pinfo : PlayerUpdateInfo) {
+        let time = self.time;
+
         self.change_player(id, &|p| {
-            p.update(time, pos, vel);
+            p.update(time, client_time, pinfo.pos, pinfo.vel);
         });
     }
 
@@ -177,3 +184,17 @@ impl GameState {
     }
 }
 
+
+use messages::GameStateInfo;
+
+impl<'a> From<&'a GameState> for GameStateInfo {
+    fn from(gs : &'a GameState) -> GameStateInfo {
+        use messages::PickupInfo;
+        use messages::PlayerInfo;
+
+        GameStateInfo {
+            pickups: gs.pickups.iter().map(|(_,val)| PickupInfo::from(val)).collect(),
+            players: gs.players.iter().map(|(_,val)| PlayerInfo::from(val)).collect(),
+        }
+    }
+}

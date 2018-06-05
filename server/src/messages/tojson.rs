@@ -35,12 +35,12 @@ impl <'a> From<&'a Payload> for JsonValue {
             &Payload::Unknown(ref text) => object!{ "text" => text.clone()},
 
             &Payload::Hello(ref hello_info) => json::from(hello_info),
-            &Payload::PlayerInfo(ref player_info) => json::from(player_info),
+            &Payload::PlayerInfo(ref player_info) => json::from(player_info.clone()),
             &Payload::State(ref state) => json::from(state),
             &Payload::Delete(ref delete) => json::from(delete),
             &Payload::PlayerDelete(ref delete) => json::from(delete),
             &Payload::Pong(ref pong) => json::from(pong),
-            &Payload::PickupInfo(ref pickup_info) => json::from(pickup_info),
+            &Payload::PickupInfo(ref pickup_info) => json::from(pickup_info.clone()),
             &Payload::PlayerUpdate(ref player_update) => json::from(player_update),
             &Payload::PlayerJoined(ref player_joined) => json::from(player_joined),
         }
@@ -53,9 +53,9 @@ impl <'a> From<&'a HelloInfo> for JsonValue {
     }
 }
 
-impl <'a> From<&'a PlayerInfo> for JsonValue {
 
-    fn from(player : &'a PlayerInfo) -> JsonValue {
+impl From<PlayerInfo> for JsonValue {
+    fn from(player : PlayerInfo) -> JsonValue {
         object!{
             "uuid" => player.uuid,
             "pos"  => &MyV2(player.pos.clone()),
@@ -68,8 +68,8 @@ impl <'a> From<&'a PlayerInfo> for JsonValue {
     }
 }
 
-impl <'a> From<&'a PickupInfo> for JsonValue {
-    fn from(pickup_info : &'a PickupInfo) -> JsonValue {
+impl From<PickupInfo> for JsonValue {
+    fn from(pickup_info : PickupInfo) -> JsonValue {
         object!{
             "uuid" => pickup_info.uuid,
             "pos"  => &MyV2(pickup_info.pos.clone()),
@@ -79,12 +79,13 @@ impl <'a> From<&'a PickupInfo> for JsonValue {
 }
 
 impl <'a> From<&'a GameStateInfo> for JsonValue {
-    fn from(_state : &'a GameStateInfo) -> JsonValue {
-        // object!{
-        //     "players" => state.players,
-        //     "pickups" => state.pickups,
-        // }
-        panic!("sakjajsa")
+    fn from(state : &'a GameStateInfo) -> JsonValue {
+        // TODO what a mess
+
+        object!{
+            "players" => state.players.clone(),
+            "pickups" => state.pickups.clone(),
+        }
     }
 }
 

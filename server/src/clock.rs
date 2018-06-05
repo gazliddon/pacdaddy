@@ -30,6 +30,5 @@ impl Clock {
             start_time : SystemTime::now()
         }
     }
-
 }
 

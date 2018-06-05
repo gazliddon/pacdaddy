@@ -11,15 +11,18 @@ pub struct Player {
     pub scale : f64,
     pub score : u64,
     pub name : String,
+    pub time : u64, 
 }
 
 impl Player {
-    pub fn new(uuid : u64, time: u64, name : &str, pos: V2) -> Self {
+    pub fn new(uuid : u64, server_time : u64, client_time: u64, name : &str, pos: V2) -> Self {
         let name = name.to_string();
-        let last_update = time; 
 
         Self {
-            uuid, last_update, name, pos,
+            uuid, 
+            last_update : server_time, 
+            time : client_time,
+            name, pos,
             scale : 1.0,
             vel: V2::new(0.0, 0.0),
             score: 0,
@@ -46,10 +49,10 @@ impl Player {
         self.score = self.score + points
     }
 
-    pub fn update(&mut self, time : u64, pos: V2, vel : V2) {
+    pub fn update(&mut self, server_time : u64, _client_time : u64, pos: V2, vel : V2) {
         self.pos = pos;
         self.vel = vel;
-        self.last_update = time;
+        self.last_update = server_time;
     }
 }
 

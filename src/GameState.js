@@ -52,6 +52,17 @@ export default class extends Dispatchable {
   onPlayer (res, payload) {
   }
 
+  onDelete (res, {data: {toDelete}}) {
+    this.removeSpr(toDelete)
+  }
+
+  onPlayerDelete (res, payLoad) {
+    let {id} = this
+    console.log('player delete')
+    console.log(id)
+    console.log(payLoad)
+  }
+
   onPing (res, incoming) {
     let {time, data: {id}} = incoming
     this.sendNow(res, 'pong', {id, time})
@@ -85,25 +96,27 @@ export default class extends Dispatchable {
 
   onState (res, payLoad) {
     let {id} = this
-    let {data: {objs, players}} = payLoad
+    let {data: {pickups, players}} = payLoad
 
     let newPlayers = {}
 
     _.forEach(players, p => {
-      newPlayers[p.id] = p
+      if (p.uuid !== id) {
+        newPlayers[p.uuid] = p
+      }
     })
 
     this.players = newPlayers
 
-    let newObjs = {}
+    let newPickups = {}
 
-    _.forEach(objs, o => {
-      if (o.id !== id) {
-        newObjs[o.id] = o
-      }
+    _.forEach(pickups, o => {
+      newPickups[o.uuid] = o
     })
 
-    this.objs = newObjs
+    this.objs = newPickups
+
+    console.log(this)
   }
 
   getPlayers () {

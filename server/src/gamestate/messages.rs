@@ -2,7 +2,7 @@ use gamestate::state::GameState;
 use messages::{Message, Payload};
 use std::sync::mpsc::{ Sender};
 use errors::Errors;
-use v2::{V2};
+// use v2::{V2};
 
 // Message sending / receiving
 impl GameState {
@@ -22,17 +22,12 @@ impl GameState {
             }
 
             Hello(hello) => {
-                let pos = V2::new(100.0, 100.0);
-                self.add_player(msg.id, hello.name, pos, msg.time);
+                self.add_player(msg.id, msg.time, hello);
                 Ok(())
             }
 
             PlayerUpdate(p_update) => {
-                self.update_player(
-                    msg.id,
-                    p_update.pos,
-                    p_update.vel,
-                    msg.time);
+                self.update_player(msg.id, msg.time, p_update);
                 Ok(())
             }
 
