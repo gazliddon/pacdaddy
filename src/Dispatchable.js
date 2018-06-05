@@ -26,7 +26,9 @@ export default class {
     let fn = this.getBoundFunc(msg)
     if (fn) {
       fn(...theArgs)
+      return true
+    } else {
+      return false
     }
-    return fn !== null
   }
 }

@@ -7,7 +7,7 @@ pub struct Player {
     pub pos : V2,
     pub vel : V2,
     frame: u64,
-    last_update: u64,
+    pub last_update: u64,
     pub scale : f64,
     pub score : u64,
     pub name : String,

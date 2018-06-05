@@ -79,7 +79,10 @@ impl GameState {
         }
 
         let _ = self.pickups.remove(&id);
-        self.broadcast(Payload::Delete(DeleteInfo {to_delete : id}));
+
+        let payload = Payload::Delete(DeleteInfo {to_delete : id});
+        info!("sending: {:?}", payload);
+        self.broadcast(payload);
     }
 
     pub fn add_player(&mut self, id : u64, client_time : u64, hello: HelloInfo) {
@@ -98,13 +101,17 @@ impl GameState {
         let gsinfo = GameStateInfo::from(&*self);
         self.send(id, Payload::State(gsinfo));
 
-        let player = Player::new(id, client_time, client_time, &hello.name, pos.clone());
+        let player = Player::new(id, self.time, client_time, &hello.name, pos.clone());
 
         self.broadcast(Payload::PlayerInfo((&player).into()));
         self.players.insert(id, player);
     }
 
     pub fn remove_player(&mut self, id : u64) {
+        if let Some(p) = self.players.get(&id) {
+            info!("deleting {} {} {}", p.last_update, self.time, p.since_last_update(self.time))
+        }
+
         info!("deleting player {}", id);
         self.players.remove(&id).unwrap();
         self.broadcast(Payload::PlayerDelete(DeleteInfo{to_delete: id}));
@@ -180,6 +187,13 @@ impl GameState {
         if self.pickups.len() < 100 {
             self.add_random_pickup();
         }
+
+        // Upate all players with where we are
+        for (id, p) in self.players.iter() {
+            let payload = Payload::PlayerInfo(p.into());
+            self.send(*id, payload);
+        };
+    
         Ok(())
     }
 }

@@ -56,11 +56,9 @@ export default class extends Dispatchable {
     this.removeSpr(toDelete)
   }
 
-  onPlayerDelete (res, payLoad) {
-    let {id} = this
-    console.log('player delete')
-    console.log(id)
-    console.log(payLoad)
+  onPlayerDelete (res, {data}) {
+    let {toDelete} = data
+    delete this.players[toDelete]
   }
 
   onPing (res, incoming) {
@@ -70,7 +68,6 @@ export default class extends Dispatchable {
 
   removeSpr (id) {
     let spr = this.objs[id]
-
     if (spr) {
       delete this.objs[id]
     }
@@ -94,6 +91,10 @@ export default class extends Dispatchable {
     this.players[id] = payLoad.data
   }
 
+  onPickupInfo (res, {data}) {
+    this.objs[data.uuid] = data
+  }
+
   onState (res, payLoad) {
     let {id} = this
     let {data: {pickups, players}} = payLoad
@@ -115,19 +116,12 @@ export default class extends Dispatchable {
     })
 
     this.objs = newPickups
-
-    console.log(this)
   }
 
   getPlayers () {
-    let list = []
-
-    _.forEach(this.players, (v, k) => {
-      let {name, score} = v
-      list.push({name, score})
+    return _.map(this.players, ({name, score}, k) => {
+      return {name, score}
     })
-
-    return list
   }
 
   getPlayerScale () {

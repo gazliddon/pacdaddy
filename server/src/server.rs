@@ -24,7 +24,7 @@ impl Server {
         let tx_to_game_state = game_state.get_sender();
 
 
-        let sixty_hertz = time::Duration::from_millis(17);
+        let sixty_hertz = time::Duration::from_millis(100);
 
 
         thread::Builder::new().name("update".to_string()).spawn(move || {

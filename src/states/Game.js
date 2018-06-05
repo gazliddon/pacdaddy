@@ -180,8 +180,11 @@ export default class extends Phaser.State {
     const gameState = new GameState(game, id)
 
     socket.onMessage((res, incoming) => {
-      console.log(incoming.msg)
-      gameState.dispatch(incoming.msg, res, incoming)
+      const handled = gameState.dispatch(incoming.msg, res, incoming)
+
+      if (!handled) {
+        console.log('unhandled message ', incoming)
+      }
     })
 
     socket.onClose((incoming) => {
