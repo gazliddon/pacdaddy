@@ -28,10 +28,10 @@ export default class extends Phaser.State {
 
   render () {
     if (config.webfonts.length && this.fontsReady) {
-      this.state.start('Splash')
+      this.state.start('Loading')
     }
     if (!config.webfonts.length) {
-      this.state.start('Splash')
+      this.state.start('Loading')
     }
   }
 

@@ -26,34 +26,6 @@ export default class extends Phaser.State {
   }
 
   preload () {
-    // let resources = {
-    //   images: {
-    //     title: 'assets/images/title.png',
-    //     mushroom: 'assets/images/mushroom2.png',
-    //     star: 'assets/images/star.png'
-    //   },
-
-    //   audio: {
-    //     main: 'assets/zone of endor.mp3',
-    //     title: 'assets/galax.mp3'
-    //   }
-    // }
-
-    this.load.image('title', 'assets/images/title.png')
-    this.load.image('mushroom', 'assets/images/mushroom2.png')
-    this.load.image('star', 'assets/images/star.png')
-    this.load.audio('main', 'assets/audio/zone of endor.mp3')
-    this.load.audio('title', 'assets/audio/galax.mp3')
-
-    this.load.audio('eat_dot', 'assets/audio/eat_dot.wav')
-    this.load.audio('eat_ghost', 'assets/audio/eat_ghost.wav')
-    this.load.audio('eyes_running_sound', 'assets/audio/eyes_running_sound.wav')
-    this.load.audio('normal_fast_siren', 'assets/audio/normal_fast_siren.wav')
-    this.load.audio('normal_slow_siren', 'assets/audio/normal_slow_siren.wav')
-    this.load.audio('player_die', 'assets/audio/player_die.wav')
-    this.load.audio('running_ghost', 'assets/audio/running_ghost.wav')
-
-    this.load.spritesheet('ms', 'assets/images/pacman.png', 16, 16)
   }
 
   onClickMe () {
@@ -111,7 +83,7 @@ export default class extends Phaser.State {
   }
 
   onFading (obj) {
-    this.music.fadeOut(1000)
+    this.music.fadeOut(500)
     this.camera.fade('#000000')
     this.camera.onFadeComplete.add(() => {
       this.sm.ev('fadeComplete', obj)
@@ -141,6 +113,8 @@ export default class extends Phaser.State {
       smoothed: false
     })
 
+    banner.fill = '#a0a0a0'
+
     banner.padding.set(10, 16)
     banner.anchor.setTo(0.5)
     banner.inputEnabled = true
@@ -150,11 +124,14 @@ export default class extends Phaser.State {
     })
 
     banner.events.onInputOver.add(() => {
-      banner.fill = '#eee'
+      // banner.fill = '#eee'
+      this.flash = banner
     }, this)
 
     banner.events.onInputOut.add(() => {
-      banner.fill = '#aaa'
+      banner.backgroundColor = '#aaa'
+      banner.fill = '#a0a0a0'
+      this.flash = null
     }, this)
   }
 
@@ -164,6 +141,13 @@ export default class extends Phaser.State {
       y = y + 80
       return m
     })
+  }
+
+  render () {
+    let {flash} = this
+    if (flash) {
+      flash.fill = '#ffffff'
+    }
   }
 
   create () {
