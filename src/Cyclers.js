@@ -10,6 +10,7 @@ function getSampleIndicies (tabSize, t) {
 let blue = {
   table: [
     new Color(0.5, 0, 0),
+    new Color(0.5, 0, 0),
     new Color(1, 0, 0),
     new Color(1, 0.5, 0.5),
     new Color(1, 0, 0)

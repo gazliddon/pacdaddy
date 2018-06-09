@@ -153,11 +153,8 @@ export default class extends Phaser.State {
 
     if (flash) {
       let t = (game.time.now) / 1000
-
       let col = cyclers.get('blue', t)
-
       flash.fill = col.asRGBStr()
-      console.log(flash.fill)
     }
   }
 
