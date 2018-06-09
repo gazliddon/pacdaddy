@@ -5,6 +5,8 @@ import StateMachine from '../StateMachine'
 import _ from 'lodash'
 import Clock from '../Clock'
 
+import Cyclers from '../Cyclers'
+
 const table = {
   start: { nothing: 'clickMe' },
   changeName: {clickMe: 'changeName'},
@@ -23,6 +25,7 @@ export default class extends Phaser.State {
     window.billboard = {}
     game.camera.scale.setTo(1, 1)
     this.sm = new StateMachine(table, 'nothing', this)
+    this.cyclers = new Cyclers()
   }
 
   preload () {
@@ -144,9 +147,17 @@ export default class extends Phaser.State {
   }
 
   render () {
+    let {game, cyclers} = this
+
     let {flash} = this
+
     if (flash) {
-      flash.fill = '#ffffff'
+      let t = (game.time.now) / 1000
+
+      let col = cyclers.get('blue', t)
+
+      flash.fill = col.asRGBStr()
+      console.log(flash.fill)
     }
   }
 
